@@ -23,7 +23,7 @@ class DBInterface:
 
     def __init__(self, db_path: Optional[Path] = None) -> Path:
         self._target_db_location = (
-            db_path if db_path else self.base_db_path / "stock_datastore.db"
+            db_path if db_path else self.base_db_path / "stock_datastore.sqlite"
         )
 
     def initialize_db(self, force: bool = False) -> None:

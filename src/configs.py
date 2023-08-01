@@ -4,6 +4,9 @@ from typing import List
 from dataclasses import dataclass
 
 
+DATE_FORMAT = "%Y%m%d"
+
+
 @dataclass
 class RunConfiguration:
     targets_to_predict: List[str]
