@@ -87,7 +87,7 @@ def configure_logs(
         root_logger.addHandler(fhandler)
 
     else:
-        log_dir = Non
+        log_dir = None
 
     # execute first log
     logger = logging.getLogger(__name__)
