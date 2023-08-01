@@ -38,7 +38,7 @@ def ingest_data_local(config_path: Path, force: bool = False):
     ]
 
     # for each symbol
-    for s in config.targets_to_predict:
+    for s in config.targets_to_ingest:
         # get the ticker
         ticker = yf.Ticker(s)
 
