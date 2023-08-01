@@ -30,7 +30,13 @@ def cli():
     type=click.BOOL,
     help="Whether to include debug logging",
 )
-def stock_predictions(config_path: Path, debug: bool):
+@click.option(
+    "--force",
+    is_flag=True,
+    type=click.BOOL,
+    help="Force regenerating the SQL database",
+)
+def stock_predictions(config_path: Path, debug: bool, force: bool):
     """Ingesting data to Big Query by getting last data (for prediction purpose)
     or loading past data (fill the database)
 
@@ -43,7 +49,7 @@ def stock_predictions(config_path: Path, debug: bool):
     configure_logs(logs_folder="output/_data_update", debug=debug)
 
     # ingest locally the data in the db
-    ingest_data_local(config_path=Path(config_path))
+    ingest_data_local(config_path=Path(config_path), force=force)
 
     # run the gnn model to get the predictions
     run_gnn_model(config_path=Path(config_path))
