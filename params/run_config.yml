@@ -1,0 +1,5 @@
+# List of stocks to ingest and predict
+targets_to_predict:
+  - RRRP3.SA
+  - BPAC11.SA
+  - ENEV3.SA
