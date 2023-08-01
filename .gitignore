@@ -81,6 +81,7 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+notebooks/
 
 # IPython
 profile_default/
@@ -128,7 +129,7 @@ celerybeat.pid
 .venv
 env/
 venv/
-ttc-env/
+tcc-env/*
 env.bak/
 venv.bak/
 
@@ -174,3 +175,5 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
+
+db/stock_datastore.sqlite
