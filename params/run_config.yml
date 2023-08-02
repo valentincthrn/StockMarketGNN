@@ -4,10 +4,24 @@ targets_to_ingest:
   - BPAC11.SA
   - ENEV3.SA
   - B3SA3.SA
+  - PETR4.SA
 
-# List of stocks to ingest
+# List of stocks to predict
 targets_to_predict:
   - RRRP3.SA
   - BPAC11.SA
   - ENEV3.SA
   - B3SA3.SA
+  - PETR4.SA
+
+data_prep:
+  price_to_rate: False
+  merge_method: "outer"
+
+encoding:
+  type: ~
+
+model:
+  input_node_size: 20
+  hidden_size: 10
+  horizon_forceast: 1
