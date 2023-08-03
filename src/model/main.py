@@ -17,7 +17,7 @@ def run_gnn_model(config_path: Path):
 
     logger.info("Building the dataset...")
     # Calling the method to prepare the data
-    trainingset, testingset = pricer.data_prep()
+    pricer.data_prep()
 
     logger.info("Training the model...")
     pricer.train()
