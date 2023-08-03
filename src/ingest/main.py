@@ -100,6 +100,12 @@ def prepare_history(ticker: yf.Ticker) -> pd.DataFrame:
     df_history["quote_date"] = df_history["quote_date"].dt.strftime(DATE_FORMAT)
     df_history.insert(loc=0, column="symbol", value=ticker.info.get("symbol"))
 
+    current_date_minus_2d = (datetime.now() - pd.Timedelta(days=2)).strftime(
+        DATE_FORMAT
+    )
+
+    df_history = df_history[df_history["quote_date"] <= current_date_minus_2d]
+
     return df_history
 
 
@@ -114,15 +120,16 @@ def update_db(db: DBInterface, ticker: yf.Ticker):
         )
     ]
 
-    current_date = datetime.now().strftime(DATE_FORMAT)
+    current_date_minus_2d = (datetime.now() - pd.Timedelta(days=2)).strftime(
+        DATE_FORMAT
+    )
 
-    # if the same date, it is fully updated
-    if max(quote_dates) == current_date:
+    if max(quote_dates) == current_date_minus_2d:
         logger.info(f"{symbol} stocks prices up-to-date")
         return
 
     # otherwise, update
     df_history = prepare_history(ticker)
-    df_to_add = df_history.loc[~(lambda f: f["quote_date"].isin(quote_dates))]
+    df_to_add = df_history.loc[~df_history["quote_date"].isin(quote_dates)]
     db.df_to_sql(pdf=df_to_add, tablename="stocks", if_exists="append", index=False)
     logger.info(f"{len(df_to_add)} new timestamps add for {symbol} updated succesfully")
