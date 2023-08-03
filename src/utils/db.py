@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Optional, Any
 import pandas as pd
 
+from src.configs import DATE_FORMAT
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -86,3 +89,11 @@ class DBInterface:
         with sqlite3.connect(self._target_db_location) as con:
             pdf.to_sql(name=tablename, con=con, **kwargs)
         con.close()
+
+    def read_sql(self, query: str, **kwargs) -> pd.DataFrame:
+        with sqlite3.connect(self._target_db_location) as con:
+            df = pd.read_sql(
+                sql=query, con=con, parse_dates={"quote_date": {"format": DATE_FORMAT}}
+            )
+        con.close()
+        return df
