@@ -10,29 +10,12 @@ targets_to_ingest:
   - EZTC3.SA
   - PETZ3.SA
 
-# List of stocks to predict
-targets_to_predict:
-  - RRRP3.SA
-  - BPAC11.SA
-  - ENEV3.SA
-  - B3SA3.SA
-  - PETR4.SA
-  - ERJ
-  - GOLL4.SA
-  - EZTC3.SA
-  - PETZ3.SA
 
 data_prep:
-  price_to_rate: False
-  merge_method: "outer"
   history_length: 14
   test_days: 180
 
-encoding:
-  type: ~
-
 model:
-  input_node_size: 14
   hidden_size: 8
   horizon_forecast: 1
-  epoch: 30
+  epoch: 2
