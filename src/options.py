@@ -1,7 +1,7 @@
 import typing
 from enum import Enum
 
-from src.model.pricer import _BaseEXP
+from model.base import _BaseEXP
 from src.experiments.simple import SimpleEXP
 
 
