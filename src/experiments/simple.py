@@ -1,6 +1,6 @@
 import typing
 
-from model.base import _BaseEXP
+from src.model.base import _BaseEXP
 from src.configs import RunConfiguration
 from src.utils.db import DBInterface
 
@@ -24,6 +24,8 @@ class SimpleEXP(_BaseEXP):
             "GOLL4.SA",
             "EZTC3.SA",
             "PETZ3.SA",
+            "BBDC4.SA",
+            "ITUB4.SA",
         ]
 
     @property

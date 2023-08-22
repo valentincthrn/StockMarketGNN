@@ -3,11 +3,12 @@ import pandas as pd
 from torch_geometric.data import Data, Batch
 import networkx as nx
 import torch
+import numpy as np
 
 from src.utils.db import DBInterface
 
 
-def df_prep(db: DBInterface, targets: list) -> pd.DataFrame:
+def df_prep(db: DBInterface, targets: list, price_to_roc: bool) -> pd.DataFrame:
     df = db.read_sql(query="SELECT * FROM stocks")
 
     df_symbol = df[lambda f: f["symbol"].isin(targets)]
@@ -19,7 +20,7 @@ def df_prep(db: DBInterface, targets: list) -> pd.DataFrame:
     df_pivot = df_symbol.pivot(
         index="quote_date",
         columns="symbol",
-        values=["open", "close", "high", "low", "volume"],
+        values=["close"],
     )
     df_pivot.columns = [
         "_".join(col).lower().replace(".sa", "") for col in df_pivot.columns.values
@@ -37,29 +38,47 @@ def df_prep(db: DBInterface, targets: list) -> pd.DataFrame:
         ].fillna(0)
         df_close.loc[:, col] = df_close.loc[:, col].fillna(method="ffill")
 
-    return df_close
+    assert df_close.isna().sum().sum() == 0, "Exist NaN values in the dataframe"
+
+    if not price_to_roc:
+        return df_close, pd.DataFrame()
+
+    df_roc = (df_close / df_close.shift(1) - 1) * 100
+    df_roc.fillna(0, inplace=True)
+    df_roc.replace([np.inf, -np.inf], 0, inplace=True)
+
+    assert df_roc.isna().sum().sum() == 0, "Exist NaN values in the dataframe"
+
+    return df_close, df_roc
 
 
-def dataset_prep(data: pd.DataFrame, config: dict) -> [Batch, Batch]:
+def dataset_prep(
+    data_price: pd.DataFrame, data_roc: pd.DataFrame, config: dict
+) -> [Batch, Batch]:
     """From the dataframe, create the graph dataset that the model
     will train on
 
     :return: the training and testing set as a sequence of graphs
     """
-
+    roc = config["price_to_roc"]
     past_k = config["history_length"]
     test_days = config["test_days"]
+
+    if roc:
+        data = data_roc
+    else:
+        data = data_price
     # Create a mapping of node names (stocks) to integers
-    node_mapping = {node: i for i, node in enumerate(data.columns)}
+    node_mapping = {node: i for i, node in enumerate(data_price.columns)}
 
     training_list = []
     testing_list = []
 
-    N = len(data)
+    N = len(data_price)
 
     for t in tqdm(range(past_k, N)):
         # Step 1: Create correlation matrix and graph for this time step
-        correlation_matrix = data.iloc[:t].corr().fillna(0)
+        correlation_matrix = data_price.iloc[:t].corr().fillna(0)
         graph = nx.from_pandas_adjacency(correlation_matrix)
         graph.remove_edges_from(nx.selfloop_edges(graph))
 

@@ -9,13 +9,16 @@ targets_to_ingest:
   - GOLL4.SA
   - EZTC3.SA
   - PETZ3.SA
+  - ITUB4.SA
+  - BBDC4.SA
 
 
 data_prep:
-  history_length: 14
+  price_to_roc: False
+  history_length: 21
   test_days: 180
 
 model:
-  hidden_size: 8
+  hidden_size: 14
   horizon_forecast: 1
-  epoch: 2
+  epoch: 60
