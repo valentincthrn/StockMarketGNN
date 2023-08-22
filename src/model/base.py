@@ -1,12 +1,14 @@
 import torch
 from torch_geometric.data import Data, Batch
 from torch.optim import Adam
+from torch.optim.lr_scheduler import ExponentialLR
 import pandas as pd
 import functools as ft
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 import abc
+from random import shuffle
 from typing import List, Optional, Dict
 
 from src.utils.common import mape_loss
@@ -74,17 +76,17 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
 
         # Define a suitable optimizer
         optimizer = Adam(self.model.parameters(), lr=0.001)
+        scheduler = ExponentialLR(optimizer, gamma=0.9)
 
         # Define loss function - mean squared error loss
         # loss_func = torch.nn.MSELoss()
-
+        data_list = self.trainingset.to_data_list()
         # Training loop
         for epoch in range(self.model_config["epoch"]):
             loss_list = []
             print("EPOCH > ", epoch)
-            for i, data in tqdm(
-                enumerate(self.trainingset.to_data_list())
-            ):  # Iterate over each graph in the batch
+            shuffle(data_list)
+            for data in tqdm(data_list):  # Iterate over each graph in the batch
                 self.model.train()
                 optimizer.zero_grad()
 
@@ -94,17 +96,13 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
                 # Calculate loss
                 loss = mape_loss(out, data.y)
                 loss_list.append(loss.item())
-                # if (i == 10) & (epoch == 1):
-                #     print("Exemple data for the 10 points")
-                #     print("input data", data.x)
-                #     print("label", data.y)
-                #     print("output model", out)
 
                 # Backward pass
                 loss.backward()
                 optimizer.step()
 
                 self.model.eval()
+            scheduler.step
             print("Mean Loss: ", np.mean(loss_list))
 
     def evaluate(self):
