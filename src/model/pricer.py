@@ -25,8 +25,7 @@ class GraphStockPricer(torch.nn.Module):
     def data_prep(self):
         data = df_prep(self.db, self.targets)
 
-        dataset = dataset_prep(data, self.config_data_prep)
-        return
+        self.trainingset, self.testingset = dataset_prep(data, self.config_data_prep)
 
     def train(self):
         return
