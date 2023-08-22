@@ -51,7 +51,7 @@ def dataset_prep(data: pd.DataFrame, config: dict) -> [Batch, Batch]:
 
     for t in tqdm(range(past_k, N)):
         # Step 1: Create correlation matrix and graph for this time step
-        correlation_matrix = data.iloc[:t].corr()
+        correlation_matrix = data.iloc[:t].corr().fillna(0)
         graph = nx.from_pandas_adjacency(correlation_matrix)
         graph.remove_edges_from(nx.selfloop_edges(graph))
 
