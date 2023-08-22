@@ -1,6 +1,6 @@
 import typing
 
-from src.model.pricer import _BaseEXP
+from model.base import _BaseEXP
 from src.configs import RunConfiguration
 from src.utils.db import DBInterface
 
