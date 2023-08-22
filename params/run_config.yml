@@ -17,6 +17,8 @@ targets_to_predict:
 data_prep:
   price_to_rate: False
   merge_method: "outer"
+  history_length: 20
+  test_days: 180
 
 encoding:
   type: ~
