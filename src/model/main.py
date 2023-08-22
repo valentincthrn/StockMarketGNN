@@ -28,4 +28,6 @@ def run_gnn_model(config_path: Path):
     logger.info("Saving the model...")
     pricer.postprocess()
 
+    pricer.save()
+
     return

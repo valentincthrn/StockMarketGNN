@@ -5,6 +5,7 @@ import pandas as pd
 import functools as ft
 from tqdm import tqdm
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 from src.model.data_manage import df_prep, dataset_prep
@@ -120,6 +121,7 @@ class GraphStockPricer(torch.nn.Module):
             s_without_sa = s.lower().replace(".sa", "")
             symbol.append(s_without_sa)
             df_s = self.result[s_without_sa]
+            df_s.plot()
             rmse_gnn.append(((df_s.true - df_s.pred_gnn) ** 2).mean() ** 0.5)
             rmse_naive.append(((df_s.true - df_s.pred_naive) ** 2).mean() ** 0.5)
 
@@ -134,3 +136,6 @@ class GraphStockPricer(torch.nn.Module):
         print(self.output)
 
         return
+
+    def save(self):
+        self.result.to_csv("test.csv")
