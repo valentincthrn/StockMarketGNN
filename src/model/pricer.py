@@ -6,6 +6,8 @@ import functools as ft
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
+import abc
+from typing import List, Optional, Dict
 
 
 from src.model.data_manage import df_prep, dataset_prep
@@ -14,30 +16,52 @@ from src.configs import RunConfiguration
 from src.utils.db import DBInterface
 
 
-class GraphStockPricer(torch.nn.Module):
+class _BaseEXP(torch.nn.Module, abc.ABC):
+    targets: List[str]
+    features: str
+    encoding_method: Optional[None]
+
     def __init__(
         self,
         config: RunConfiguration,
         db: DBInterface,
     ):
-        super(GraphStockPricer, self).__init__()
-        self.config_data_prep: dict = config.data_prep
-        self.config_encoding: dict = config.encoding
-        self.config_model: dict = config.model
-        self.targets: list = config.targets_to_predict
+        super(_BaseEXP, self).__init__()
+
+        # global config
+        self.data_config: dict = config.data_prep
+        self.model_config: dict = config.model
+
+        self.targets = self._targets
+        self.features = self._features
+        self.encoding_method = self._encodings
+
         self.db: DBInterface = db
+
+    @property
+    @abc.abstractmethod
+    def _targets(self) -> List[str]:
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def _encodings(self) -> List[str]:
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def _features(self) -> Dict[str, bool]:
+        raise NotImplementedError
 
     def data_prep(self):
         self.data = df_prep(self.db, self.targets)
 
-        self.trainingset, self.testingset = dataset_prep(
-            self.data, self.config_data_prep
-        )
+        self.trainingset, self.testingset = dataset_prep(self.data, self.data_config)
 
     def train(self):
         self.model = GNN(
-            num_features=self.config_data_prep["history_length"],
-            hidden_channels=self.config_model["hidden_size"],
+            num_features=self.data_config["history_length"],
+            hidden_channels=self.model_config["hidden_size"],
             num_classes=1,
         )
 
@@ -48,7 +72,7 @@ class GraphStockPricer(torch.nn.Module):
         loss_func = torch.nn.MSELoss()
 
         # Training loop
-        for epoch in range(self.config_model["epoch"]):
+        for epoch in range(self.model_config["epoch"]):
             loss_list = []
             print("EPOCH > ", epoch)
             for data in tqdm(
@@ -87,11 +111,11 @@ class GraphStockPricer(torch.nn.Module):
         df_pred = pd.DataFrame(
             np.squeeze(np.array(preds)),
             columns=pred_col_gnn,
-            index=self.data.iloc[-self.config_data_prep["test_days"] :].index,
+            index=self.data.iloc[-self.data_config["test_days"] :].index,
         )
 
         self.result = pd.concat(
-            [self.data.iloc[-self.config_data_prep["test_days"] :], df_pred],
+            [self.data.iloc[-self.data_config["test_days"] :], df_pred],
             axis=1,
         )
 

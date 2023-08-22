@@ -1,33 +1,33 @@
 from pathlib import Path
 import logging
 
-from src.model.pricer import GraphStockPricer
+from src.options import EXP, EXP_OBJECTS
 from src.utils.db import DBInterface
 from src.configs import RunConfiguration, DATE_FORMAT
+from src.utils.logs import log_errors
 
 logger = logging.getLogger(__name__)
 
 
-def run_gnn_model(config_path: Path):
+@log_errors
+def run_gnn_model(exp_name: str, config_path: Path):
     db = DBInterface()
     config = RunConfiguration.from_yaml(config_path)
 
-    # Instantiate the pricer object
-    pricer = GraphStockPricer(config, db)
+    exp_enum = EXP(exp_name)
+    exp_obj = EXP_OBJECTS[exp_enum](config=config, db=db)
 
     logger.info("Building the dataset...")
     # Calling the method to prepare the data
-    pricer.data_prep()
+    exp_obj.data_prep()
 
     logger.info("Training the model...")
-    pricer.train()
+    exp_obj.train()
 
     logger.info("Evaluating the model...")
-    pricer.evaluate()
+    exp_obj.evaluate()
 
     logger.info("Saving the model...")
-    pricer.postprocess()
+    exp_obj.postprocess()
 
-    pricer.save()
-
-    return
+    exp_obj.save()
