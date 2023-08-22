@@ -1,5 +1,6 @@
 import torch
 from torch_geometric.data import Data, Batch
+import pandas as pd
 
 from src.configs import RunConfiguration
 from src.utils.db import DBInterface
@@ -19,7 +20,8 @@ class GraphStockPricer(torch.nn.Module):
         self.db: DBInterface = db
 
     def data_prep(self):
-        return 1, 2
+        df = self.db.read_sql(query="SELECT * FROM stocks")
+        print(df)
 
     def train(self):
         return
