@@ -16,7 +16,7 @@ def df_prep(db: DBInterface, targets: list) -> pd.DataFrame:
 
     min_dates = df_symbol.groupby(by="symbol").agg({"quote_date": "min"})
 
-    df_pivot = df.pivot(
+    df_pivot = df_symbol.pivot(
         index="quote_date",
         columns="symbol",
         values=["open", "close", "high", "low", "volume"],
