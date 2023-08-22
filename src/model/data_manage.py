@@ -14,6 +14,8 @@ def df_prep(db: DBInterface, targets: list) -> pd.DataFrame:
 
     assert not df_symbol.empty, "The dataframe is empty"
 
+    min_dates = df_symbol.groupby(by="symbol").agg({"quote_date": "min"})
+
     df_pivot = df.pivot(
         index="quote_date",
         columns="symbol",
@@ -26,8 +28,14 @@ def df_prep(db: DBInterface, targets: list) -> pd.DataFrame:
     # focus only on close price for now
     df_close = df_pivot.filter(like="close")
 
-    # fillna 0 for now
-    df_close = df_close.fillna(0)
+    # fillna 0 for before date, and fill forward after begin date
+    for s, min_quote in min_dates.itertuples():
+        col = f"close_{s.lower().replace('.sa', '')}"
+
+        df_close.loc[lambda f: f.index < min_quote, col] = df_close.loc[
+            lambda f: f.index < min_quote, col
+        ].fillna(0)
+        df_close.loc[:, col] = df_close.loc[:, col].fillna(method="ffill")
 
     return df_close
 

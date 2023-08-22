@@ -8,6 +8,7 @@ targets_to_ingest:
   - ERJ
   - GOLL4.SA
   - EZTC3.SA
+  - PETZ3.SA
 
 # List of stocks to predict
 targets_to_predict:
@@ -16,9 +17,10 @@ targets_to_predict:
   - ENEV3.SA
   - B3SA3.SA
   - PETR4.SA
-  - ERJ.SA
+  - ERJ
   - GOLL4.SA
   - EZTC3.SA
+  - PETZ3.SA
 
 data_prep:
   price_to_rate: False
