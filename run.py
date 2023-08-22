@@ -27,7 +27,7 @@ def cli():
 @click.option(
     "-i",
     "--ignore-ingest",
-    default=False,
+    is_flag=True,
     type=click.BOOL,
     help="Whether to ignore the ingestion",
 )
