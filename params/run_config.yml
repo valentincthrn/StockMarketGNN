@@ -43,4 +43,4 @@ data_prep:
 model:
   hidden_size: 14
   horizon_forecast: 1
-  epoch: 50
+  epoch: 20

@@ -2,6 +2,7 @@ import torch
 from torch_geometric.data import Data, Batch
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ExponentialLR
+import mlflow
 import pandas as pd
 import functools as ft
 from tqdm import tqdm
@@ -42,6 +43,11 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
         self.encoding_method = self._encodings
 
         self.db: DBInterface = db
+
+        mlflow.log_param("Target Companies", self.targets)
+        mlflow.log_params(self.data_config)
+        mlflow.log_params(self.model_config)
+        mlflow.log_param("Encoding", self.encoding_method)
 
     @property
     @abc.abstractmethod
@@ -104,6 +110,7 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
                 self.model.eval()
             scheduler.step
             print("Mean Loss: ", np.mean(loss_list))
+            mlflow.log_metric("Training Loss", np.mean(loss_list))
 
     def evaluate(self):
         # evaluate predictions
@@ -177,6 +184,10 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
                 "rmse_naive": rmse_naive,
             }
         )
+
+        for symbol, rmse_gnn, rmse_naive in self.output.itertuples(index=False):
+            mlflow.log_metric(key=symbol + "_pred_test_gnn", value=rmse_gnn)
+            mlflow.log_metric(key=symbol + "_pred_test_naives", value=rmse_naive)
 
         print(self.output)
 
