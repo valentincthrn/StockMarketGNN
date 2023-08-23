@@ -14,7 +14,7 @@ from typing import List, Optional, Dict
 
 from src.utils.common import mape_loss
 from src.model.data_manage import df_prep, dataset_prep
-from src.model.mygnn import GNN
+from src.model.mygnn import GNN, testing
 from src.configs import RunConfiguration, DATE_FORMAT
 from src.utils.db import DBInterface
 
@@ -80,6 +80,9 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
             num_classes=1,
         )
 
+        data_price_true = self.data_price.copy()
+        data_price_true.columns = [col + "_true" for col in data_price_true.columns]
+
         # Define a suitable optimizer
         optimizer = Adam(self.model.parameters(), lr=0.001)
         scheduler = ExponentialLR(optimizer, gamma=0.9)
@@ -109,8 +112,16 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
 
                 self.model.eval()
             scheduler.step
-            print("Mean Loss: ", np.mean(loss_list))
+
+            print("Mean Training Loss: ", np.mean(loss_list))
             mlflow.log_metric("Training Loss", np.mean(loss_list))
+
+            testing(
+                self.model,
+                self.testingset,
+                data_price_true,
+                self.data_config["test_days"],
+            )
 
     def evaluate(self):
         # evaluate predictions
