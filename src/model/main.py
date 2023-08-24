@@ -38,5 +38,3 @@ def run_gnn_model(exp_name: str, config_path: Path):
 
         logger.info("Saving the model...")
         exp_obj.postprocess()
-
-        exp_obj.save()
