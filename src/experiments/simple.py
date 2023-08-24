@@ -50,3 +50,11 @@ class SimpleEXP(_BaseEXP):
             "technicals + fundamentalist": False,
             "technicals + fundamentalist + economics": False,
         }
+
+    @property
+    def _exp_model(self) -> typing.Dict[str, bool]:
+        return {
+            "nbr_gcn_hidden": 2,
+            "nbr_mlp_hidden": 1,
+            "has_dropout": False,
+        }
