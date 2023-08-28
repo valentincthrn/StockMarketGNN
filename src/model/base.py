@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.data import Data, Batch
 from torch.optim import Adam
-from torch.optim.lr_scheduler import ExponentialLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import mlflow
 import pandas as pd
 import functools as ft
@@ -78,32 +78,39 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
         raise NotImplementedError
 
     def data_prep(self):
-        self.data_price, self.data_roc = df_prep(
-            self.db, self.targets, price_to_roc=self.data_config["price_to_roc"]
-        )
+        self.data_price = df_prep(self.db, self.targets)
 
         self.trainingset, self.testingset = dataset_prep(
-            self.data_price, self.data_roc, self.data_config
+            self.data_price, self.data_config
         )
 
     def train(self):
-        self.model = GNN(model_config=self.model_config, exp_config=self.exp_model)
+        self.model = GNN(
+            model_config=self.model_config,
+            exp_config=self.exp_model,
+            encoding=self.encoding_method,
+        )
         mlflow.log_params(self.exp_model)
 
         self.data_price.columns = [col + "_true" for col in self.data_price.columns]
 
         # Define a suitable optimizer
-        optimizer = Adam(self.model.parameters(), lr=0.001)
-        scheduler = ExponentialLR(optimizer, gamma=0.9)
+        optimizer = Adam(self.model.parameters(), lr=self.model_config["lr_adam"])
+        scheduler = ReduceLROnPlateau(
+            optimizer, mode="min", factor=self.model_config["factor"], patience=5
+        )
 
         # Define loss function - mean squared error loss
         # loss_func = torch.nn.MSELoss()
         data_list = self.trainingset.to_data_list()
+        best_loss = 1e6
+        count_not_improve = 0
         # Training loop
         for epoch in range(self.model_config["epoch"]):
             loss_list = []
             print("EPOCH > ", epoch)
-            shuffle(data_list)
+            if self.model_config["shuffle"]:
+                shuffle(data_list)
             for data in tqdm(data_list):  # Iterate over each graph in the batch
                 self.model.train()
                 optimizer.zero_grad()
@@ -113,6 +120,9 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
 
                 # Calculate loss
                 loss = mape_loss(out, data.y)
+                # if torch.isnan(loss).any():
+                #     print(out)
+                #     print(data.y)
                 loss_list.append(loss.item())
 
                 # Backward pass
@@ -121,11 +131,13 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
 
                 self.model.eval()
             scheduler.step
+            # print(loss_list[-180:])
 
-            print("MAPE Training Loss: ", np.mean(loss_list))
-            mlflow.log_metric("MAPE Training Loss", np.mean(loss_list))
+            train_loss = np.mean(loss_list)
+            print("MAPE Training Loss: ", train_loss)
+            mlflow.log_metric("MAPE Training Loss", train_loss)
 
-            testing(
+            test_mape = testing(
                 self.model,
                 self.testingset,
                 self.data_price,
@@ -133,9 +145,23 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
                 during_training=True,
             )
 
+            if test_mape < best_loss:
+                print(f"MODEL IMPROVED FROM {best_loss:.2f} TO {test_mape:.2f}")
+                best_loss = test_mape
+                mlflow.pytorch.log_model(self.model, "best_model")
+                count_not_improve = 0
+            else:
+                count_not_improve += 1
+
+            if count_not_improve == 15:
+                print("Not improved for 15 loops, STOP")
+                break
+
     def evaluate(self):
         self.result = testing(
-            self.model,
+            mlflow.pytorch.load_model(
+                f"runs:/{mlflow.active_run().info.run_id}/best_model"
+            ),
             self.testingset,
             self.data_price,
             self.data_config["test_days"],
@@ -166,6 +192,10 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
             pred_naive_values = self.result[col, "pred_naive"]
             naive_error = calculate_mape(true_values, pred_naive_values)
             mlflow.log_metric(col + "_naive", naive_error)
+
+            pred_gnn_values = self.result[col, "pred_naive"]
+            gnn_error = calculate_mape(true_values, pred_gnn_values)
+            mlflow.log_metric(col + "_gnn", gnn_error)
 
         self.result.columns = [
             " ".join(col).strip() for col in self.result.columns.values

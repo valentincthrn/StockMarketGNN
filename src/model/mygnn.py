@@ -2,26 +2,36 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import mlflow
-from typing import Dict
+from typing import Dict, Optional
 import torch
 import torch.nn.functional as F
-from torch_geometric.nn import GraphConv
+from torch_geometric.nn import GCNConv, GraphConv, GATConv, GeneralConv, ChebConv
 from torch_geometric.data import Batch
 
 from src.utils.common import calculate_mape
 
 
 class GNN(torch.nn.Module):
-    def __init__(self, model_config: Dict, exp_config: Dict):
+    def __init__(self, model_config: Dict, exp_config: Dict, encoding: Optional[str]):
         super(GNN, self).__init__()
 
         self.nbr_gcn_hidden = exp_config["nbr_gcn_hidden"]
         self.nbr_mlp_hidden = exp_config["nbr_mlp_hidden"]
         self.has_dropout = exp_config["has_dropout"]
+        self.hist_length = model_config["history_length"]
+        self.output_enc = model_config["output_enc"]
+        self.encoding = encoding
 
-        self.conv_first = GraphConv(
-            model_config["history_length"], model_config["hidden_size"]
-        )
+        if self.encoding == "LSTM":
+            self.lstm = torch.nn.LSTM(self.hist_length, self.output_enc)
+            self.conv_first = GraphConv(self.output_enc, model_config["hidden_size"])
+        if self.encoding == "MLP":
+            self.mlp = torch.nn.Linear(self.hist_length, self.output_enc)
+            self.conv_first = GraphConv(self.output_enc, model_config["hidden_size"])
+
+        else:
+            self.conv_first = GraphConv(self.hist_length, model_config["hidden_size"])
+
         self.conv_hidden = GraphConv(
             model_config["hidden_size"], model_config["hidden_size"]
         )
@@ -36,17 +46,26 @@ class GNN(torch.nn.Module):
         )
 
     def forward(self, data):
-        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        x, edge_index, edge_weight = data.x, data.edge_index, data.edge_weights
 
-        x = self.conv_first(x, edge_index, edge_attr)
+        if self.encoding == "LSTM":
+            # LSTM layer
+            x, _ = self.lstm(x.unsqueeze(0))
+            x = x.squeeze(0)
+        if self.encoding == "MLP":
+            x = self.mlp(x)
+
+        x = self.conv_first(x, edge_index, edge_weight)
         x = F.relu(x)
 
         if self.has_dropout:
             x = self.dropout(x)
 
         for _ in range(self.nbr_gcn_hidden):
-            x = self.conv_hidden(x, edge_index, edge_attr)
+            x = self.conv_hidden(x, edge_index, edge_weight)
             x = F.relu(x)
+            if self.has_dropout:
+                x = self.dropout(x)
 
         for _ in range(self.nbr_mlp_hidden):
             x = self.fc_hidden(x)
@@ -84,6 +103,9 @@ def testing(
     # Add the close price
     result = result.join(data_price)
 
+    # Drop the first row by index
+    result.drop(result.index[0], inplace=True)
+
     if during_training:
         # Creating the MultiIndex
         multi_columns = [
@@ -106,6 +128,8 @@ def testing(
         mlflow.log_metrics(mape_values)
         mlflow.log_metric("MAPE Testing Loss", mape)
         print("MAPE Testing Loss: ", mape)
+
+        return mape
 
     else:
         return result

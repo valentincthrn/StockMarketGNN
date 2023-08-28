@@ -36,11 +36,19 @@ targets_to_ingest:
 
 
 data_prep:
-  price_to_roc: False
-  history_length: 21
+  corr: "spearman"
+  min_periods: 31
+  history_length: 14 # CHANGE BOTH !!!!!
   test_days: 180
 
 model:
-  hidden_size: 14
+  history_length: 14 # CHANGE BOTH !!!!!
+  hidden_size: 7
+  output_enc: 7
   horizon_forecast: 1
-  epoch: 20
+  dropout: 0.2
+  epoch: 100
+  lr_adam: 0.01
+  factor: 0.1
+  shuffle: True
+  
