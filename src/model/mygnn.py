@@ -2,17 +2,25 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import mlflow
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 import torch
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, GraphConv, GATConv, GeneralConv, ChebConv
 from torch_geometric.data import Batch
+from torch.nn import ModuleDict
+
 
 from src.utils.common import calculate_mape
 
 
 class GNN(torch.nn.Module):
-    def __init__(self, model_config: Dict, exp_config: Dict, encoding: Optional[str]):
+    def __init__(
+        self,
+        model_config: Dict,
+        exp_config: Dict,
+        targets: List,
+        encoding: Optional[str],
+    ):
         super(GNN, self).__init__()
 
         self.nbr_gcn_hidden = exp_config["nbr_gcn_hidden"]
@@ -20,16 +28,36 @@ class GNN(torch.nn.Module):
         self.has_dropout = exp_config["has_dropout"]
         self.hist_length = model_config["history_length"]
         self.output_enc = model_config["output_enc"]
+        self.targets = targets
         self.encoding = encoding
 
-        if self.encoding == "LSTM":
+        assert self.encoding in [
+            "LSTM SHARED",
+            "LSTM NOT SHARED",
+            "MLP",
+            None,
+        ], "A valid encoding should be choosing (LSTM SHARED, LSTM NOT SHARED, MLP)"
+
+        if self.encoding == "LSTM NOT SHARED":
+            self.lstm = ModuleDict(
+                {
+                    f"lstm_{comp.lower().replace('.sa', '')}": torch.nn.LSTM(
+                        self.hist_length, self.output_enc
+                    )
+                    for comp in self.targets  # Assuming there are 9 companies
+                }
+            )
+            self.conv_first = GraphConv(self.output_enc, model_config["hidden_size"])
+
+        if self.encoding == "LSTM SHARED":
             self.lstm = torch.nn.LSTM(self.hist_length, self.output_enc)
             self.conv_first = GraphConv(self.output_enc, model_config["hidden_size"])
+
         if self.encoding == "MLP":
             self.mlp = torch.nn.Linear(self.hist_length, self.output_enc)
             self.conv_first = GraphConv(self.output_enc, model_config["hidden_size"])
 
-        else:
+        if self.encoding is None:
             self.conv_first = GraphConv(self.hist_length, model_config["hidden_size"])
 
         self.conv_hidden = GraphConv(
@@ -48,10 +76,22 @@ class GNN(torch.nn.Module):
     def forward(self, data):
         x, edge_index, edge_weight = data.x, data.edge_index, data.edge_weights
 
-        if self.encoding == "LSTM":
+        if self.encoding == "LSTM NOT SHARED":
+            outputs = []
+            for i, comp in enumerate(
+                self.targets
+            ):  # Process each company's data separately
+                out, _ = self.lstm[f"lstm_{comp.lower().replace('.sa', '')}"](
+                    x[i].unsqueeze(0).unsqueeze(0)
+                )
+                outputs.append(out.squeeze(0))
+            x = torch.stack(outputs, dim=0).squeeze(1)
+
+        if self.encoding == "LSTM SHARED":
             # LSTM layer
             x, _ = self.lstm(x.unsqueeze(0))
             x = x.squeeze(0)
+
         if self.encoding == "MLP":
             x = self.mlp(x)
 

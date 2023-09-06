@@ -88,6 +88,7 @@ class _BaseEXP(torch.nn.Module, abc.ABC):
         self.model = GNN(
             model_config=self.model_config,
             exp_config=self.exp_model,
+            targets=self.targets,
             encoding=self.encoding_method,
         )
         mlflow.log_params(self.exp_model)
