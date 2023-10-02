@@ -11,7 +11,7 @@ from src.configs import RunConfiguration, DATE_FORMAT
 logger = logging.getLogger(__name__)
 
 
-def ingest_data_local(config_path: Path, force: bool = False):
+def ingest_data_local(config_path: Path, force: bool = False) -> None:
     """
     Set up a new local instance SQLite database
     and update it with the most recent files
@@ -37,7 +37,7 @@ def ingest_data_local(config_path: Path, force: bool = False):
         res[0] for res in db.execute_statement("SELECT DISTINCT symbol FROM stocks")
     ]
 
-    # for each symbol
+    # for each symbol we want to ingest
     for s in config.targets_to_ingest:
         # get the ticker
         ticker = yf.Ticker(s)
@@ -85,7 +85,7 @@ def ingest_data_local(config_path: Path, force: bool = False):
 
 
 def prepare_history(ticker: yf.Ticker) -> pd.DataFrame:
-    """Given a ticker, prepare the data to fill in the database
+    """Given a ticker, prepare the data to fill in the SQL database
 
     :param ticker: the ticker to prepare the stock data
     :type ticker: yf.Ticker
@@ -109,10 +109,20 @@ def prepare_history(ticker: yf.Ticker) -> pd.DataFrame:
     return df_history
 
 
-def update_db(db: DBInterface, ticker: yf.Ticker):
+def update_db(db: DBInterface, ticker: yf.Ticker, limit: int = 2) -> None:
+    """Given a ticker, update its prices in the SQL if needed.
+    We load the prices until 2 days ago to ensure that the prices ingested are reliable
+
+    :param db: the SQL instance
+    :type db: DBInterface
+    :param ticker: the name of the ticker to update
+    :type ticker: yf.Ticker
+    """
+
+    # Get the officiel ticker name based on his symbol
     symbol = ticker.info.get("symbol")
 
-    # get last date
+    # Get the last date existing in the database of the ticker
     quote_dates = [
         res[0]
         for res in db.execute_statement(
@@ -120,15 +130,17 @@ def update_db(db: DBInterface, ticker: yf.Ticker):
         )
     ]
 
-    current_date_minus_2d = (datetime.now() - pd.Timedelta(days=2)).strftime(
+    # Set the maximum date we will ingest: TODAY - 2 Days
+    current_date_minus_2d = (datetime.now() - pd.Timedelta(days=limit)).strftime(
         DATE_FORMAT
     )
 
+    # If this last day has already be ingested: pass
     if max(quote_dates) == current_date_minus_2d:
         logger.info(f"{symbol} stocks prices up-to-date")
         return
 
-    # otherwise, update
+    # otherwise, update it to the SQL instance
     df_history = prepare_history(ticker)
     df_to_add = df_history.loc[~df_history["quote_date"].isin(quote_dates)]
     db.df_to_sql(pdf=df_to_add, tablename="stocks", if_exists="append", index=False)
