@@ -18,3 +18,11 @@ CREATE TABLE IF NOT EXISTS stocks (
     FOREIGN KEY (symbol) references stocks_metadata (symbol)
 );
 
+CREATE TABLE IF NOT EXISTS macro (
+    indicators TEXT NOT NULL,
+    quote_date DATE NOT NULL,
+    value REAL NOT NULL,
+    PRIMARY KEY (indicators, quote_date)
+);
+
+

@@ -2,7 +2,7 @@ from pathlib import Path
 import logging
 
 from src.utils.db import DBInterface
-from src.configs import RunConfiguration, 
+from src.configs import RunConfiguration
 from src.ingest.stock import ingest_data_local
 from src.ingest.macroeco import ingest_macroeco_data
 
@@ -22,14 +22,13 @@ def ingest_data(config_path: Path, force: bool = False) -> None:
     """
     # Define config file
     config = RunConfiguration.from_yaml(config_path)
-    
-    
+
     # initialize the database
     db = DBInterface()
     db.initialize_db(force)
-    
+
     logger.info("> INGEST DATA PRICES")
-    ingest_data_local(config = config, db = db)
-    
+    ingest_data_local(target_list=config.targets_to_ingest, db=db)
+
     logger.info("> INGEST MACROECO INDICATORS")
-    ingest_macroeco_data(config = config, db = db)
+    ingest_macroeco_data(target_indicators=config.macro_indicators, db=db)

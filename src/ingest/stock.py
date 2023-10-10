@@ -4,6 +4,7 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime
 from urllib.error import HTTPError
+from typing import List
 
 from src.utils.db import DBInterface
 from src.configs import RunConfiguration, DATE_FORMAT
@@ -11,7 +12,7 @@ from src.configs import RunConfiguration, DATE_FORMAT
 logger = logging.getLogger(__name__)
 
 
-def ingest_data_local(config: dict, db: DBInterface) -> None:
+def ingest_data_local(target_list: List[str], db: DBInterface) -> None:
     """
     Set up a new local instance SQLite database
     and update it with the most recent files
@@ -32,7 +33,7 @@ def ingest_data_local(config: dict, db: DBInterface) -> None:
     ]
 
     # for each symbol we want to ingest
-    for s in config.targets_to_ingest:
+    for s in target_list:
         # get the ticker
         ticker = yf.Ticker(s)
 
