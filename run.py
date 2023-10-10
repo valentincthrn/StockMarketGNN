@@ -3,7 +3,7 @@ from pathlib import Path
 import os, time
 
 from src.options import EXP
-from src.ingest.main import ingest_data_local
+from src.ingest.main import ingest_data
 from src.model.main import run_gnn_model
 from src.utils.logs import configure_logs
 
@@ -66,7 +66,7 @@ def stock_predictions(
 
     if not ignore_ingest:
         # ingest locally the data in the db
-        ingest_data_local(config_path=Path(config_path), force=force)
+        ingest_data(config_path=Path(config_path), force=force)
 
     # run the gnn model to get the predictions
     run_gnn_model(exp_name=exp, config_path=Path(config_path))
