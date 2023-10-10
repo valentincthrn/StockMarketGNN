@@ -10,6 +10,7 @@ DATE_FORMAT = "%Y%m%d"
 @dataclass
 class RunConfiguration:
     targets_to_ingest: List[str]
+    macro_indicators: Dict[str, str]
     data_prep: Dict[str, Any]
     model: Dict[str, int]
 
