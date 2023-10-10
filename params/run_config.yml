@@ -34,6 +34,13 @@ targets_to_ingest:
   - EZTC3.SA
   - PETZ3.SA
 
+macro_indicators:
+  Risco-Brasil: 'JPM366_EMBI366'
+  PIB: 'BM12_PIB12'
+  Dolar: 'BM12_ERC12'
+  Selic Over: 'BM12_TJOVER12'
+  IPCA: 'PRECOS12_IPCAG12'
+
 
 data_prep:
   corr: "spearman"
@@ -47,7 +54,7 @@ model:
   output_enc: 7
   horizon_forecast: 1
   dropout: 0.2
-  epoch: 100
+  epoch: 40
   lr_adam: 0.01
   factor: 0.1
   shuffle: True

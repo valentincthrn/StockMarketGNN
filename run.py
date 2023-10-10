@@ -69,7 +69,7 @@ def stock_predictions(
         ingest_data(config_path=Path(config_path), force=force)
 
     # run the gnn model to get the predictions
-    run_gnn_model(exp_name=exp, config_path=Path(config_path))
+    # run_gnn_model(exp_name=exp, config_path=Path(config_path))
 
 
 if __name__ == "__main__":

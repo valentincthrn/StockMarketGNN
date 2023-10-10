@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS stocks (
 CREATE TABLE IF NOT EXISTS macro (
     indicators TEXT NOT NULL,
     quote_date DATE NOT NULL,
-    value REAL NOT NULL,
+    valor REAL,
     PRIMARY KEY (indicators, quote_date)
 );
 
