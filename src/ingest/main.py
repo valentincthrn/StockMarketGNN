@@ -28,7 +28,7 @@ def ingest_data(config_path: Path, force: bool = False) -> None:
     db.initialize_db(force)
 
     logger.info("> INGEST DATA PRICES")
-    # ingest_data_local(target_list=config.targets_to_ingest, db=db)
+    ingest_data_local(target_list=config.targets_to_ingest, db=db)
 
     logger.info("> INGEST MACROECO INDICATORS")
     ingest_macroeco_data(target_indicators=config.macro_indicators, db=db)
