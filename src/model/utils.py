@@ -16,7 +16,7 @@ def run_all(
     # Get the data
     data_t = data[train_or_test][timestep]
     pred_t = data["pred"][timestep]
-    macro = data["macro"][timestep]
+    macro = data["macro"].get(timestep)
 
     if train_or_test == "train":
         optimizer.zero_grad()
@@ -79,8 +79,10 @@ def run_mlp_heads_separatly(
 
     for k, comp in enumerate(comps):
         out_gnn_comp_i = features_encoded[k]
-
-        gnn_with_macro = torch.concatenate([out_gnn_comp_i, macro])
+        if macro is None:
+            gnn_with_macro = out_gnn_comp_i
+        else:
+            gnn_with_macro = torch.concatenate([out_gnn_comp_i, macro])
 
         price_comp_i = mlp_heads[comp](gnn_with_macro)
         price_outputs_time_t.append(price_comp_i)

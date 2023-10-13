@@ -3,7 +3,7 @@ ingest:
   # List of stocks to ingest
   target_stocks:
 
-  # TOP5 BANKS
+  # # TOP5 BANKS
     - ITUB4.SA # It is the largest private bank in Brazil and has a significant presence in various countries.
     - BBDC4.SA # Another major private-sector bank with a vast network of branches and services across the country.
     - BBAS3.SA # It is the largest public bank in Brazil and has a strong presence both domestically and internationally.
@@ -25,28 +25,29 @@ ingest:
     IPCA: 'PRECOS12_IPCAG12'
 
   fundamental_indicators:
-    - P/L
-    - PL/ATIVOS
-    - M. EBIT
-    - ROA
-    - CAGR LUCROS 5 ANOS
+    # - P/L
+    # - PL/ATIVOS
+    # - M. EBIT
+    # - ROA
+    # - CAGR LUCROS 5 ANOS
 
 data_prep:
   pe_t: 10
   history: 31
-  horizon_forecast: 14
-  test_days: 180
-  step_every: 100
+  horizon_forecast: 1
+  test_days: 360
+  step_every: 1
 
 hyperparams:
   out_lstm_size: 5
   out_gnn_size: 5
   criterion: "MSE"
   optimizer: "Adam"
-  lr: 0.01
+  lr: 0.001
   scheduler: "ReduceLROnPlateau"
   patience: 8
   factor: 0.8
-  epochs: 300
+  epochs: 10
+  pct_subset: 0.5
   use_gnn: True
   

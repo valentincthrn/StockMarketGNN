@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
+import numpy as np
 import torch
 
 from src.utils.db import DBInterface
@@ -48,15 +49,18 @@ class DataPrep:
 
         logger.info(">> Merging Prices and Fundamentals Indicators")
 
-        df_prices["year"] = df_prices.index.year
+        if not df_fund.empty:
+            df_prices["year"] = df_prices.index.year
+            df_merge = df_prices.merge(
+                df_fund,
+                how="left",
+                on="year",
+            ).drop("year", axis=1)
 
-        df_merge = df_prices.merge(
-            df_fund,
-            how="left",
-            on="year",
-        ).drop("year", axis=1)
+            df_merge.set_index(df_prices.index, inplace=True)
 
-        df_merge.set_index(df_prices.index, inplace=True)
+        else:
+            df_merge = df_prices.copy()
 
         multi = pd.MultiIndex.from_tuples(
             [tuple(col.split("_")) for col in df_merge.columns]
@@ -83,8 +87,6 @@ class DataPrep:
     def _extract_prices(self):
         df = self.db.read_sql(query="SELECT * FROM stocks")
 
-        print(self.config.ingest)
-
         df_symbol = df[lambda f: f["symbol"].isin(self.config.ingest["target_stocks"])]
 
         assert not df_symbol.empty, "The dataframe is empty. Ingest the data before"
@@ -106,11 +108,16 @@ class DataPrep:
     def _extract_fund(self):
         df_fund = pd.read_csv(self.data_path / "company_indicators_top5_banks.csv")
 
+        # df_fund = df_fund.loc[lambda f: abs(f["valor"]) < 1]
+
         TARGETS_LOW = [
             col.lower().replace(".sa", "")
             for col in self.config.ingest["target_stocks"]
         ]
         COMP_IND = self.config.ingest["fundamental_indicators"]
+
+        if COMP_IND is None:
+            return pd.DataFrame()
 
         df_ind = df_fund.loc[
             lambda f: f["stock"].isin(TARGETS_LOW) & f["indicators"].isin(COMP_IND)
@@ -131,10 +138,15 @@ class DataPrep:
         return df_pivot
 
     def _extract_macro(self):
+        if self.config.ingest["macro_indicators"] is None:
+            return pd.DataFrame()
+
         df_macro = self.db.read_sql(query="SELECT * FROM macro")
 
         macro_to_keep = list(self.config.ingest["macro_indicators"].keys())
         df_macro = df_macro.loc[lambda f: f["indicators"].isin(macro_to_keep)]
+
+        df_macro = df_macro.loc[lambda f: abs(f["valor"]) != np.inf]
 
         assert not df_macro.empty, "The macro is empty. Ingest the data before"
 
@@ -152,13 +164,14 @@ class DataPrep:
         df_prices_with_fund: pd.DataFrame,
         df_macro: pd.DataFrame,
     ):
-        df_macro = (
-            pd.DataFrame(df_prices_with_fund.reset_index()["quote_date"])
-            .merge(df_macro, on="quote_date", how="left")
-            .fillna(method="backfill")
-            .fillna(0)
-            .set_index("quote_date")
-        )
+        if not df_macro.empty:
+            df_macro = (
+                pd.DataFrame(df_prices_with_fund.reset_index()["quote_date"])
+                .merge(df_macro, on="quote_date", how="left")
+                .fillna(method="backfill")
+                .fillna(0)
+                .set_index("quote_date")
+            )
 
         hyperparam = self.config.data_prep
 
@@ -182,14 +195,20 @@ class DataPrep:
                 horizon=hyperparam["horizon_forecast"],
             )
 
+            if torch.isnan(torch.tensor(y)).any():
+                print("NaN Detected In Target")
+
             data["pred"][t] = dict(zip(companies, y))
 
-            macro_features = torch.tensor(df_macro.iloc[t].values, dtype=torch.float)
+            if not df_macro.empty:
+                macro_features = torch.tensor(
+                    df_macro.iloc[t].values, dtype=torch.float
+                )
 
-            if torch.isnan(macro_features).any():
-                print("NaN Detected In Macro")
+                if torch.isnan(macro_features).any():
+                    print("NaN Detected In Macro")
 
-            data["macro"][t] = macro_features
+                data["macro"][t] = macro_features
 
             d_t = {}
 

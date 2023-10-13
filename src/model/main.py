@@ -21,7 +21,10 @@ logger = logging.getLogger(__name__)
 def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name: str):
     config = RunConfiguration.from_yaml(config_path)
 
-    macro_size = next(iter(data["macro"].values())).shape[0]
+    if len(data["macro"]) == 0:
+        macro_size = 0
+    else:
+        macro_size = next(iter(data["macro"].values())).shape[0]
 
     try:
         exp_id = mlflow.create_experiment(exp_name)
@@ -63,20 +66,25 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
             list(lstm_models.parameters())
             + list(my_gnn.parameters())
             + list(mlp_heads.parameters()),
-            lr=0.01,
+            lr=config.hyperparams["lr"],
         )
 
         # Learning rate scheduler
         scheduler = lr_scheduler.ReduceLROnPlateau(
-            optimizer, "min", patience=8, factor=0.8, verbose=True
+            optimizer,
+            "min",
+            patience=config.hyperparams["patience"],
+            factor=config.hyperparams["factor"],
+            verbose=True,
         )
 
         logger.info("Training the model...")
+        int_subset = int(config.hyperparams["pct_subset"] * len(data["train"]))
 
         for epoch in range(config.hyperparams["epochs"]):
             total_train_loss = 0.0
             total_test_loss = 0.0
-            train_timesteps = list(data["train"].keys())
+            train_timesteps = list(data["train"].keys())[:int_subset]
             test_timesteps = list(data["test"].keys())
             random.shuffle(train_timesteps)
 
