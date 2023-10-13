@@ -2,10 +2,10 @@ import click
 from pathlib import Path
 import os, time
 
-from src.options import EXP
+from src.utils.db import DBInterface
 from src.ingest.main import ingest_data
-from src.model.main import run_gnn_model
 from src.utils.logs import configure_logs
+from src.data_prep.main import DataPrep
 
 # Setting same timezone
 os.environ["TZ"] = "America/Sao_Paulo"
@@ -18,12 +18,6 @@ def cli():
 
 
 @cli.command()
-@click.option(
-    "-e",
-    "--exp",
-    type=click.Choice([e.value for e in EXP]),
-    help="The experiment to run",
-)
 @click.option(
     "-c",
     "--config-path",
@@ -50,9 +44,7 @@ def cli():
     type=click.BOOL,
     help="Force regenerating the SQL database",
 )
-def stock_predictions(
-    exp: str, config_path: Path, ignore_ingest: bool, debug: bool, force: bool
-):
+def stock_predictions(config_path: Path, ignore_ingest: bool, debug: bool, force: bool):
     """Ingesting data to Big Query by getting last data (for prediction purpose)
     or loading past data (fill the database)
 
@@ -68,7 +60,10 @@ def stock_predictions(
         # ingest locally the data in the db
         ingest_data(config_path=Path(config_path), force=force)
 
-    # run the gnn model to get the predictions
+    data_prep = DataPrep(config_path=Path(config_path), db=DBInterface())
+    data = data_prep.get_data()
+
+    # get the data
     # run_gnn_model(exp_name=exp, config_path=Path(config_path))
 
 

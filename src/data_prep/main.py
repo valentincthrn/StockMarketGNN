@@ -16,35 +16,35 @@ logger = logging.getLogger(__name__)
 class DataPrep:
     CACHE_DATA: dict
 
-    def __init__(self) -> None:
+    def __init__(self, config_path: RunConfiguration, db: DBInterface) -> None:
+        # Define config file
+        self.config = RunConfiguration.from_yaml(config_path)
+        self.db = db
+
         project_path = Path(os.getcwd())
         self.data_path = project_path / "data"
 
-    def get_data(self, run_config: RunConfiguration, db: DBInterface):
-        if self.CACHE_DATA.get(run_config) is None:
-            logger.info("No data found based on this config, creating it...")
-            data = self.extract_data(run_config, db)
-            self.CACHE_DATA[run_config] = data
-        return self.CACHE_DATA.get(run_config)
+    def get_data(self):
+        return self.extract_data()
 
-    def extract_data(self, run_config: RunConfiguration, db: DBInterface):
+    def extract_data(self):
         logger.info("Extracting Prices and Fundamentals Indicators")
-        df_prices_with_fund = self._extract_prices_and_fund(run_config, db)
+        df_prices_with_fund = self._extract_prices_and_fund()
 
         logger.info("Extracting Macro-Economical Indicators")
-        df_macro = self._extract_macro(run_config)
+        df_macro = self._extract_macro()
 
         logger.info("Creating Data Dictionnary")
-        data = self._run_extraction(run_config, df_prices_with_fund, df_macro)
+        data = self._run_extraction(df_prices_with_fund, df_macro)
 
         return data
 
-    def _extract_prices_and_fund(self, run_config: RunConfiguration, db: DBInterface):
+    def _extract_prices_and_fund(self):
         logger.info(">> Extracting Prices")
-        df_prices = self._extract_prices(run_config, db)
+        df_prices = self._extract_prices()
 
         logger.info(">> Extracting Fundamentals Indicators")
-        df_fund = self._fundamental_indicators(run_config)
+        df_fund = self._extract_fund()
 
         logger.info(">> Merging Prices and Fundamentals Indicators")
 
@@ -74,10 +74,12 @@ class DataPrep:
 
         return df_merge
 
-    def _extract_prices(self, run_config: RunConfiguration, db: DBInterface):
-        df = db.read_sql(query="SELECT * FROM stocks")
+    def _extract_prices(self):
+        df = self.db.read_sql(query="SELECT * FROM stocks")
 
-        df_symbol = df[lambda f: f["symbol"].isin(run_config.ingest.targets)]
+        print(self.config.ingest)
+
+        df_symbol = df[lambda f: f["symbol"].isin(self.config.ingest["target_stocks"])]
 
         assert not df_symbol.empty, "The dataframe is empty. Ingest the data before"
 
@@ -95,13 +97,14 @@ class DataPrep:
 
         return df_close
 
-    def _extract_fund(self, run_config: RunConfiguration):
+    def _extract_fund(self):
         df_fund = pd.read_csv(self.data_path / "company_indicators_top5_banks.csv")
 
         TARGETS_LOW = [
-            col.lower().replace(".sa", "") for col in run_config.ingest.targets
+            col.lower().replace(".sa", "")
+            for col in self.config.ingest["target_stocks"]
         ]
-        COMP_IND = run_config.ingest.fundamental_indicators
+        COMP_IND = self.config.ingest["fundamental_indicators"]
 
         df_ind = df_fund.loc[
             lambda f: f["stock"].isin(TARGETS_LOW) & f["indicators"].isin(COMP_IND)
@@ -121,11 +124,11 @@ class DataPrep:
 
         return df_pivot
 
-    def _extract_macro(self, run_config: RunConfiguration, db: DBInterface):
-        df_macro = db.read_sql(query="SELECT * FROM macro")
+    def _extract_macro(self):
+        df_macro = self.db.read_sql(query="SELECT * FROM macro")
 
-        macro_to_keep = run_config.ingest.macro_indicators.keys()
-        df_macro = df_macro[macro_to_keep]
+        macro_to_keep = list(self.config.ingest["macro_indicators"].keys())
+        df_macro = df_macro.loc[lambda f: f["indicators"].isin(macro_to_keep)]
 
         assert not df_macro.empty, "The macro is empty. Ingest the data before"
 
@@ -140,7 +143,6 @@ class DataPrep:
 
     def _run_extraction(
         self,
-        run_config: RunConfiguration,
         df_prices_with_fund: pd.DataFrame,
         df_macro: pd.DataFrame,
     ):
@@ -152,14 +154,20 @@ class DataPrep:
             .set_index("quote_date")
         )
 
-        hyperparam = run_config.data_prep
+        hyperparam = self.config.data_prep
 
         pe = PositionalEncoding(hyperparam["pe_t"])
         N = df_prices_with_fund.shape[0]
 
         data = {"train": {}, "test": {}, "pred": {}, "macro": {}}
 
-        for t in tqdm(range(hyperparam["horizon_forecast"], N - hyperparam["history"])):
+        for t in tqdm(
+            range(
+                hyperparam["horizon_forecast"],
+                N - hyperparam["history"],
+                self.config.data_prep["step_every"],
+            )
+        ):
             # extract prices history, futures and companies name
             df_prices, y, companies = add_time_component(
                 df=df_prices_with_fund,
@@ -212,7 +220,3 @@ class DataPrep:
                 data["train"][t] = d_t
 
         return data
-
-
-def get_data(run_config, data_prep):
-    return data_prep.get_data(run_config)

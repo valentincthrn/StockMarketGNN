@@ -36,15 +36,16 @@ data_prep:
   history: 31
   horizon_forecast: 14
   test_days: 180
+  step_every: 20
 
 hyperparameters:
-  out_lstm_size: 5,
-  out_gnn_size: 5,
-  criterion: "MSE",
-  optimizer: "Adam",
-  lr: 0.01,
-  scheduler: "ReduceLROnPlateau",
-  patience: 8,
-  factor: 0.8,
-  epochs: 300, 
+  out_lstm_size: 5
+  out_gnn_size: 5
+  criterion: "MSE"
+  optimizer: "Adam"
+  lr: 0.01
+  scheduler: "ReduceLROnPlateau"
+  patience: 8
+  factor: 0.8
+  epochs: 300
   
