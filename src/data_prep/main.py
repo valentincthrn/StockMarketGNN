@@ -66,6 +66,10 @@ class DataPrep:
 
         df_merge = df_merge.reorder_levels([0, 1], axis=1).sort_index(axis=1)
 
+        for comp in list(set(multi.get_level_values(0))):
+            size = df_merge.loc[:, (comp, slice(None))].shape[1]
+            logger.info(f">>> {comp} has {size-1} macro indicators")
+
         df_merge["diff"] = (
             -(df_merge.reset_index()["quote_date"].shift(1) - df_merge.index)
             .dt.days.fillna(0)
