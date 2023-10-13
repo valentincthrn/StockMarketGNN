@@ -6,6 +6,7 @@ from src.utils.db import DBInterface
 from src.ingest.main import ingest_data
 from src.utils.logs import configure_logs
 from src.data_prep.main import DataPrep
+from src.model.main import run_gnn_model
 
 # Setting same timezone
 os.environ["TZ"] = "America/Sao_Paulo"
@@ -61,10 +62,12 @@ def stock_predictions(config_path: Path, ignore_ingest: bool, debug: bool, force
         ingest_data(config_path=Path(config_path), force=force)
 
     data_prep = DataPrep(config_path=Path(config_path), db=DBInterface())
-    data = data_prep.get_data()
+    data, d_size = data_prep.get_data()
 
     # get the data
-    # run_gnn_model(exp_name=exp, config_path=Path(config_path))
+    run_gnn_model(
+        data=data, d_size=d_size, config_path=Path(config_path), exp_name="Test"
+    )
 
 
 if __name__ == "__main__":

@@ -25,11 +25,11 @@ class DataPrep:
         self.data_path = project_path / "data"
 
     def get_data(self):
-        return self.extract_data()
+        return self._extract_data()
 
-    def extract_data(self):
+    def _extract_data(self):
         logger.info("Extracting Prices and Fundamentals Indicators")
-        df_prices_with_fund = self._extract_prices_and_fund()
+        df_prices_with_fund, d_size = self._extract_prices_and_fund()
 
         logger.info("Extracting Macro-Economical Indicators")
         df_macro = self._extract_macro()
@@ -37,7 +37,7 @@ class DataPrep:
         logger.info("Creating Data Dictionnary")
         data = self._run_extraction(df_prices_with_fund, df_macro)
 
-        return data
+        return data, d_size
 
     def _extract_prices_and_fund(self):
         logger.info(">> Extracting Prices")
@@ -66,8 +66,10 @@ class DataPrep:
 
         df_merge = df_merge.reorder_levels([0, 1], axis=1).sort_index(axis=1)
 
+        d_size = {}
         for comp in list(set(multi.get_level_values(0))):
             size = df_merge.loc[:, (comp, slice(None))].shape[1]
+            d_size[comp] = size
             logger.info(f">>> {comp} has {size-1} macro indicators")
 
         df_merge["diff"] = (
@@ -76,7 +78,7 @@ class DataPrep:
             .values
         )
 
-        return df_merge
+        return df_merge, d_size
 
     def _extract_prices(self):
         df = self.db.read_sql(query="SELECT * FROM stocks")
