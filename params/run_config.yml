@@ -1,61 +1,50 @@
-# List of stocks to ingest
-targets_to_ingest:
 
-# Banks
-  - NUBR33.SA
-  - ITUB4.SA
-  - ABCB4.SA
-  - RPAD5.SA
-  - BRIV4.SA
-  - BAZA3.SA
-  - BMGB4.SA
-  - BPAN4.SA
-  - BGIP4.SA
-  - BEES3.SA
-  - BRSR6.SA
-  - BBDC4.SA
-  - BBAS3.SA
-  - BSLI4.SA
-  - BPAC11.SA
-  - INBR32.SA
-  - BMEB4.SA
-  - BMIN4.SA
-  - BNBR3.SA
-  - SANB11.SA
+ingest:
+  # List of stocks to ingest
+  target_stocks:
 
+  # TOP5 BANKS
+    - ITUB4.SA # It is the largest private bank in Brazil and has a significant presence in various countries.
+    - BBDC4.SA # Another major private-sector bank with a vast network of branches and services across the country.
+    - BBAS3.SA # It is the largest public bank in Brazil and has a strong presence both domestically and internationally.
+    - SANB11.SA # The Brazilian unit of the global banking group Santander, it has become one of the main banks in Brazil.
+    - BPAC11.SA # It is a leading investment bank in Brazil and has expanded its retail banking operations in recent years.
 
-  - RRRP3.SA
-  - BPAC11.SA
-  - ENEV3.SA
-  - B3SA3.SA
-  - PETR4.SA
-  - ERJ
-  - GOLL4.SA
-  - EZTC3.SA
-  - PETZ3.SA
+  # TOP5 RANDOM
+    - PETR4.SA # Energy Sector - Petrobras is Brazil's state-controlled oil company and is a major player in the exploration, production, and refining of oil and natural gas.
+    - VALE3.SA # Mining Sector - Vale is one of the world's largest producers of iron ore and nickel. They also produce copper, coal, manganese, and other minerals.
+    - ABEV3.SA # Beverage Sector - AmBev, or Companhia de Bebidas das Américas, is a major beverage company known for its beers, soft drinks, and other beverages. Brands under its umbrella include Skol, Brahma, and Antarctica.
+    - B3SA3.SA # Financial Services Sector - B3 is the main financial market infrastructure company in Brazil and offers services related to exchange markets, over-the-counter markets, and infrastructure for the issuance of financial assets.
+    - JBSS3.SA # Food Sector - JBS is one of the world's leading food industry companies with a vast portfolio that includes meat, poultry, lamb, and leather processing.
 
-macro_indicators:
-  Risco-Brasil: 'JPM366_EMBI366'
-  PIB: 'BM12_PIB12'
-  Dolar: 'BM12_ERC12'
-  Selic Over: 'BM12_TJOVER12'
-  IPCA: 'PRECOS12_IPCAG12'
+  macro_indicators:
+    Risco-Brasil: 'JPM366_EMBI366'
+    PIB: 'BM12_PIB12'
+    Dolar: 'BM12_ERC12'
+    Selic Over: 'BM12_TJOVER12'
+    IPCA: 'PRECOS12_IPCAG12'
 
+  fundamental_indicators:
+    - P/L
+    - PL/ATIVOS
+    - M. EBIT
+    - ROA
+    - CAGR LUCROS 5 ANOS
 
 data_prep:
-  corr: "spearman"
-  min_periods: 31
-  history_length: 14 # CHANGE BOTH !!!!!
+  pe_t: 10
+  history: 31
+  horizon_forecast: 14
   test_days: 180
 
-model:
-  history_length: 14 # CHANGE BOTH !!!!!
-  hidden_size: 7
-  output_enc: 7
-  horizon_forecast: 1
-  dropout: 0.2
-  epoch: 40
-  lr_adam: 0.01
-  factor: 0.1
-  shuffle: True
+hyperparameters:
+  out_lstm_size: 5,
+  out_gnn_size: 5,
+  criterion: "MSE",
+  optimizer: "Adam",
+  lr: 0.01,
+  scheduler: "ReduceLROnPlateau",
+  patience: 8,
+  factor: 0.8,
+  epochs: 300, 
   

@@ -1,6 +1,6 @@
 import yaml
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 from dataclasses import dataclass
 
 
@@ -9,10 +9,9 @@ DATE_FORMAT = "%Y%m%d"
 
 @dataclass
 class RunConfiguration:
-    targets_to_ingest: List[str]
-    macro_indicators: Dict[str, str]
-    data_prep: Dict[str, Any]
-    model: Dict[str, int]
+    ingest: Dict[str, Any]
+    data_prep: Dict[str, int]
+    hyperparameters: Dict[str, Union[int, str]]
 
     @classmethod
     def from_yaml(cls, yml_path: Path):
