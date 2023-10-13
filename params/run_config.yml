@@ -18,11 +18,11 @@ ingest:
     # - JBSS3.SA # Food Sector - JBS is one of the world's leading food industry companies with a vast portfolio that includes meat, poultry, lamb, and leather processing.
 
   macro_indicators:
-    Risco-Brasil: 'JPM366_EMBI366'
-    PIB: 'BM12_PIB12'
-    Dolar: 'BM12_ERC12'
-    Selic Over: 'BM12_TJOVER12'
-    IPCA: 'PRECOS12_IPCAG12'
+    # Risco-Brasil: 'JPM366_EMBI366'
+    # PIB: 'BM12_PIB12'
+    # Dolar: 'BM12_ERC12'
+    # Selic Over: 'BM12_TJOVER12'
+    # IPCA: 'PRECOS12_IPCAG12'
 
   fundamental_indicators:
     # - P/L
@@ -43,11 +43,11 @@ hyperparams:
   out_gnn_size: 5
   criterion: "MSE"
   optimizer: "Adam"
-  lr: 0.001
+  lr: 0.01
   scheduler: "ReduceLROnPlateau"
   patience: 8
   factor: 0.8
-  epochs: 10
+  epochs: 300
   pct_subset: 0.5
-  use_gnn: True
+  use_gnn: False
   

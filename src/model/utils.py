@@ -43,7 +43,7 @@ def run_all(
         loss.backward()
         optimizer.step()
 
-    return loss
+    return loss, pred, comps
 
 
 def run_lstm_separatly(lstm_dict: torch.nn.ModuleDict, data_t: dict) -> torch.tensor:

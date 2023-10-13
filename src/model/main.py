@@ -2,6 +2,7 @@ from pathlib import Path
 import logging
 import mlflow
 import pandas as pd
+import numpy as np
 from torch.nn import ModuleDict
 import torch
 from torch.optim import Adam, lr_scheduler
@@ -45,10 +46,15 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
                 for comp, size in d_size.items()
             }
         )
+        if config.hyperparams["use_gnn"]:
+            in_channels_mlp = config.hyperparams["out_gnn_size"]
+        else:
+            in_channels_mlp = config.hyperparams["out_lstm_size"]
+
         mlp_heads = ModuleDict(
             {
                 comp: torch.nn.Linear(
-                    config.hyperparams["out_gnn_size"] + macro_size,
+                    in_channels_mlp + macro_size,
                     config.data_prep["horizon_forecast"],
                 )
                 for comp in d_size.keys()
@@ -62,10 +68,12 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
 
         # Define a loss function and optimizer
         # criterion = torch.nn.MSELoss()  # Mean Squared Error Loss for regression tasks
+        if config.hyperparams["use_gnn"]:
+            list_gnn = list(my_gnn.parameters())
+        else:
+            list_gnn = []
         optimizer = Adam(
-            list(lstm_models.parameters())
-            + list(my_gnn.parameters())
-            + list(mlp_heads.parameters()),
+            list(lstm_models.parameters()) + list_gnn + list(mlp_heads.parameters()),
             lr=config.hyperparams["lr"],
         )
 
@@ -81,15 +89,22 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
         logger.info("Training the model...")
         int_subset = int(config.hyperparams["pct_subset"] * len(data["train"]))
 
+        mlflow.log_params(config.data_prep)
+        mlflow.log_params(config.hyperparams)
+
+        best_loss = np.inf
+        best_pred_df = pd.DataFrame()
+
         for epoch in range(config.hyperparams["epochs"]):
             total_train_loss = 0.0
             total_test_loss = 0.0
             train_timesteps = list(data["train"].keys())[:int_subset]
             test_timesteps = list(data["test"].keys())
             random.shuffle(train_timesteps)
+            list_test_loss = []
 
             for timestep in tqdm(train_timesteps):
-                loss = run_all(
+                loss, _, _ = run_all(
                     data=data,
                     timestep=timestep,
                     train_or_test="train",
@@ -104,10 +119,11 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
 
             avg_train_loss = total_train_loss / len(train_timesteps)
 
+            pred_list = []
             my_gnn.eval()  # Set the model to evaluation mode
             with torch.no_grad():
                 for timestep in tqdm(test_timesteps):
-                    loss = run_all(
+                    loss, pred, comps = run_all(
                         data=data,
                         timestep=timestep,
                         train_or_test="test",
@@ -117,14 +133,46 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
                         mlp_heads=mlp_heads,
                         use_gnn=config.hyperparams["use_gnn"],
                     )
+
+                    pred_list.append(
+                        pd.DataFrame(
+                            data=dict(zip(comps, list(pred.numpy().squeeze()))),
+                            index=[timestep],
+                        )
+                    )
                     total_test_loss += loss.item()
 
+                df_pred = pd.concat(pred_list)
                 avg_test_loss = total_test_loss / len(test_timesteps)
+                if avg_test_loss < best_loss:
+                    print("Best Loss! >> ", avg_test_loss)
+                    best_loss = avg_test_loss
+                    best_pred_df = df_pred
 
-            # results_loss["train"].append(avg_train_loss)
-            # results_loss["test"].append(avg_test_loss)
             # Update the learning rate
             scheduler.step(avg_test_loss)
             print(
                 f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
             )
+
+            mlflow.log_metric("Training Loss", avg_train_loss)
+            mlflow.log_metric("Validation Loss", avg_test_loss)
+            list_test_loss.append(avg_test_loss)
+
+        subset_stocks = "banks"  # Top5 Random
+        subset_vars = "prices"
+        if config.hyperparams["use_gnn"]:
+            model = "with_gnn"
+        else:
+            model = "without_gnn"
+
+        mlflow.log_param("Stocks", subset_stocks)
+        mlflow.log_param(
+            "Variable", subset_vars
+        )  # Prices & Fundamental , Prices & Fundamental & Macro
+        mlflow.log_metric("Best Test Mape", min(list_test_loss))
+
+        PATH_CSV = (
+            "best_pred_" + subset_stocks + "_" + subset_vars + "_" + model + ".csv"
+        )
+        best_pred_df.to_csv("data/" + PATH_CSV)
