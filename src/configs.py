@@ -11,7 +11,7 @@ DATE_FORMAT = "%Y%m%d"
 class RunConfiguration:
     ingest: Dict[str, Any]
     data_prep: Dict[str, int]
-    hyperparameters: Dict[str, Union[int, str]]
+    hyperparams: Dict[str, Union[int, str]]
 
     @classmethod
     def from_yaml(cls, yml_path: Path):
