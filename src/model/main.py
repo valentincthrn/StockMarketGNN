@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 
 from src.configs import RunConfiguration
-from src.model.module import CompanyExtractor, MyGNN
+from src.model.module import CompanyExtractor, MyGNN, MLPWithHiddenLayer
 from src.model.utils import run_all
 from src.utils.logs import log_errors
 
@@ -53,9 +53,8 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
 
         mlp_heads = ModuleDict(
             {
-                comp: torch.nn.Linear(
-                    in_channels_mlp + macro_size,
-                    config.data_prep["horizon_forecast"],
+                comp: MLPWithHiddenLayer(
+                    in_channels_mlp + macro_size, config.data_prep["horizon_forecast"]
                 )
                 for comp in d_size.keys()
             }
@@ -94,6 +93,8 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
 
         best_loss = np.inf
         best_pred_df = pd.DataFrame()
+        stop_count = 0
+        list_test_loss = []
 
         for epoch in range(config.hyperparams["epochs"]):
             total_train_loss = 0.0
@@ -101,7 +102,6 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
             train_timesteps = list(data["train"].keys())[:int_subset]
             test_timesteps = list(data["test"].keys())
             random.shuffle(train_timesteps)
-            list_test_loss = []
 
             for timestep in tqdm(train_timesteps):
                 loss, _, _ = run_all(
@@ -145,9 +145,17 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
                 df_pred = pd.concat(pred_list)
                 avg_test_loss = total_test_loss / len(test_timesteps)
                 if avg_test_loss < best_loss:
+                    stop_count = 0
                     print("Best Loss! >> ", avg_test_loss)
                     best_loss = avg_test_loss
                     best_pred_df = df_pred
+                else:
+                    stop_count += 1
+                if stop_count == config.hyperparams["patience_stop"]:
+                    logger.info(
+                        f"Stop! {config.hyperparams['patience_stop']} epochs without improving test loss"
+                    )
+                    break
 
             # Update the learning rate
             scheduler.step(avg_test_loss)
@@ -173,6 +181,14 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
         mlflow.log_metric("Best Test Mape", min(list_test_loss))
 
         PATH_CSV = (
-            "best_pred_" + subset_stocks + "_" + subset_vars + "_" + model + ".csv"
+            "best_pred_"
+            + str(round(min(list_test_loss), 2))
+            + "_"
+            + subset_stocks
+            + "_"
+            + subset_vars
+            + "_"
+            + model
+            + ".csv"
         )
         best_pred_df.to_csv("data/" + PATH_CSV)

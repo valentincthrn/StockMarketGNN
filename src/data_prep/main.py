@@ -183,7 +183,7 @@ class DataPrep:
         for t in tqdm(
             range(
                 hyperparam["horizon_forecast"],
-                N - hyperparam["history"],
+                N - (hyperparam["start"] + hyperparam["history"]),
                 self.config.data_prep["step_every"],
             )
         ):
@@ -193,7 +193,15 @@ class DataPrep:
                 time=t,
                 history=hyperparam["history"],
                 horizon=hyperparam["horizon_forecast"],
+                min_points=hyperparam["min_points_history"],
             )
+
+            if df_prices.drop(["diff", "order"], axis=1).empty:
+                continue
+
+            if t % 500 == 0:
+                print(companies)
+                print(df_prices.shape)
 
             if torch.isnan(torch.tensor(y)).any():
                 print("NaN Detected In Target")
@@ -224,6 +232,10 @@ class DataPrep:
                 tensor_col = torch.tensor(df_col.values, dtype=torch.float)
                 prices = tensor_col[hyperparam["horizon_forecast"] :, :-1]
                 pos = tensor_col[hyperparam["horizon_forecast"] :, -1].unsqueeze(-1)
+
+                if t % 500 == 0:
+                    print(col)
+                    print(prices.shape)
 
                 # encode the position
                 pos_enc = pe(pos)

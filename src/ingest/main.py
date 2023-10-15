@@ -28,7 +28,12 @@ def ingest_data(config_path: Path, force: bool = False) -> None:
     db.initialize_db(force)
 
     logger.info("> INGEST DATA PRICES")
-    ingest_data_local(target_list=config.targets_to_ingest, db=db)
+    ingest_data_local(target_list=config.ingest["target_stocks"], db=db)
 
-    logger.info("> INGEST MACROECO INDICATORS")
-    ingest_macroeco_data(target_indicators=config.macro_indicators, db=db)
+    if config.ingest["macro_indicators"] is None:
+        logger.info("> NO MACROECO INDICATORS!")
+        pass
+
+    else:
+        logger.info("> INGEST MACROECO INDICATORS")
+        ingest_macroeco_data(target_indicators=config.ingest["macro_indicators"], db=db)

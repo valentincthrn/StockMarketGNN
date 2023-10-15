@@ -16,6 +16,18 @@ class CompanyExtractor(torch.nn.Module):
         return hn[0]
 
 
+class MLPWithHiddenLayer(torch.nn.Module):
+    def __init__(self, input_size, output_size):
+        super(MLPWithHiddenLayer, self).__init__()
+
+        self.hidden = torch.nn.Linear(input_size, input_size)
+        self.output = torch.nn.Linear(input_size, output_size)
+
+    def forward(self, x):
+        x = torch.nn.functional.relu(self.hidden(x))
+        return self.output(x)
+
+
 class MyGNN(torch.nn.Module):
     def __init__(
         self,
