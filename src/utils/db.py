@@ -28,6 +28,7 @@ class DBInterface:
         self._target_db_location = (
             db_path if db_path else self.base_db_path / "stock_datastore.sqlite"
         )
+        self._target_db_location_str = str(self._target_db_location )
 
     def initialize_db(self, force: bool = False) -> None:
         """
@@ -46,7 +47,7 @@ class DBInterface:
         """
         Helper method to connect and run a series of scripts
         """
-        with sqlite3.connect(self._target_db_location) as con:
+        with sqlite3.connect(self._target_db_location_str) as con:
             for arg in args:
                 with open(arg, "r") as fp:
                     sql_script = fp.read()
@@ -61,7 +62,7 @@ class DBInterface:
         :type statement: str
         """
         logger.debug(f"Executing {statement} with {args}")
-        with sqlite3.connect(self._target_db_location) as con:
+        with sqlite3.connect(self._target_db_location_str) as con:
             recordset = con.execute(statement, *args)
             result = recordset.fetchall()
         con.close()
@@ -73,7 +74,7 @@ class DBInterface:
         :param query: query to be executed
         :type query: str
         """
-        with sqlite3.connect(self._target_db_location) as con:
+        with sqlite3.connect(self._target_db_location_str) as con:
             con.executemany(query, *args, **kwargs)
             con.commit()
         con.close()
@@ -86,12 +87,12 @@ class DBInterface:
         :param tablename: tablename to export the dataframe
         :type tablename: str
         """
-        with sqlite3.connect(self._target_db_location) as con:
+        with sqlite3.connect(self._target_db_location_str) as con:
             pdf.to_sql(name=tablename, con=con, **kwargs)
         con.close()
 
     def read_sql(self, query: str, **kwargs) -> pd.DataFrame:
-        with sqlite3.connect(self._target_db_location) as con:
+        with sqlite3.connect(self._target_db_location_str) as con:
             df = pd.read_sql(
                 sql=query, con=con, parse_dates={"quote_date": {"format": DATE_FORMAT}}
             )
