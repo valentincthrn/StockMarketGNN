@@ -17,10 +17,19 @@ logger = logging.getLogger(__name__)
 class DataPrep:
     CACHE_DATA: dict
 
-    def __init__(self, config_path: RunConfiguration, db: DBInterface) -> None:
+    def __init__(
+        self,
+        config_path: RunConfiguration,
+        db: DBInterface,
+        overwrite_params: dict = None,
+    ) -> None:
         # Define config file
         self.config = RunConfiguration.from_yaml(config_path)
         self.db = db
+
+        if overwrite_params is not None:
+            for k, v in overwrite_params.items():
+                self.config.data_prep[k] = v
 
         project_path = Path(os.getcwd())
         self.data_path = project_path / "data"
@@ -199,10 +208,6 @@ class DataPrep:
             if df_prices.drop(["diff", "order"], axis=1).empty:
                 continue
 
-            if t % 500 == 0:
-                print(companies)
-                print(df_prices.shape)
-
             if torch.isnan(torch.tensor(y)).any():
                 print("NaN Detected In Target")
 
@@ -232,10 +237,6 @@ class DataPrep:
                 tensor_col = torch.tensor(df_col.values, dtype=torch.float)
                 prices = tensor_col[hyperparam["horizon_forecast"] :, :-1]
                 pos = tensor_col[hyperparam["horizon_forecast"] :, -1].unsqueeze(-1)
-
-                if t % 500 == 0:
-                    print(col)
-                    print(prices.shape)
 
                 # encode the position
                 pos_enc = pe(pos)

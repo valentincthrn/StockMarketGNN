@@ -19,8 +19,23 @@ logger = logging.getLogger(__name__)
 
 
 @log_errors
-def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name: str):
+def run_gnn_model(
+    data: pd.DataFrame,
+    d_size: dict,
+    config_path: Path,
+    exp_name: str,
+    overwrite_dataprep: dict = None,
+    overwrite_hyperparams: dict = None,
+    base_path_save_csv: str = "data/",
+):
     config = RunConfiguration.from_yaml(config_path)
+
+    if overwrite_dataprep is not None:
+        for k, v in overwrite_dataprep.items():
+            config.data_prep[k] = v
+    if overwrite_hyperparams is not None:
+        for k, v in overwrite_hyperparams.items():
+            config.hyperparams[k] = v
 
     if len(data["macro"]) == 0:
         macro_size = 0
@@ -191,4 +206,5 @@ def run_gnn_model(data: pd.DataFrame, d_size: dict, config_path: Path, exp_name:
             + model
             + ".csv"
         )
-        best_pred_df.to_csv("data/" + PATH_CSV)
+
+        best_pred_df.to_csv(base_path_save_csv + PATH_CSV)
