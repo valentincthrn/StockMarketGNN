@@ -21,11 +21,13 @@ class DataPrep:
         self,
         config_path: RunConfiguration,
         db: DBInterface,
+        device: "cuda",
         overwrite_params: dict = None,
     ) -> None:
         # Define config file
         self.config = RunConfiguration.from_yaml(config_path)
         self.db = db
+        self.device = device
 
         if overwrite_params is not None:
             for k, v in overwrite_params.items():
@@ -216,7 +218,7 @@ class DataPrep:
             if not df_macro.empty:
                 macro_features = torch.tensor(
                     df_macro.iloc[t].values, dtype=torch.float
-                )
+                ).to(self.device)
 
                 if torch.isnan(macro_features).any():
                     print("NaN Detected In Macro")
@@ -234,7 +236,7 @@ class DataPrep:
                 )
 
                 # tensor
-                tensor_col = torch.tensor(df_col.values, dtype=torch.float)
+                tensor_col = torch.tensor(df_col.values, dtype=torch.float).to(self.device)
                 prices = tensor_col[hyperparam["horizon_forecast"] :, :-1]
                 pos = tensor_col[hyperparam["horizon_forecast"] :, -1].unsqueeze(-1)
 
