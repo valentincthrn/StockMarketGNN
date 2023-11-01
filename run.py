@@ -61,7 +61,10 @@ def stock_predictions(config_path: Path, ignore_ingest: bool, debug: bool, force
         # ingest locally the data in the db
         ingest_data(config_path=Path(config_path), force=force)
 
-    data_prep = DataPrep(config_path=Path(config_path), db=DBInterface())
+    data_prep = DataPrep(
+        config_path=Path(config_path),
+        db=DBInterface(),
+    )
     data, d_size = data_prep.get_data()
 
     # get the data
