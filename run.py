@@ -1,6 +1,7 @@
 import click
 from pathlib import Path
 import os, time
+import torch
 
 from src.utils.db import DBInterface
 from src.ingest.main import ingest_data
@@ -60,16 +61,19 @@ def stock_predictions(config_path: Path, ignore_ingest: bool, debug: bool, force
     if not ignore_ingest:
         # ingest locally the data in the db
         ingest_data(config_path=Path(config_path), force=force)
+        
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     data_prep = DataPrep(
         config_path=Path(config_path),
         db=DBInterface(),
+        device=device,
     )
     data, d_size = data_prep.get_data()
 
     # get the data
     run_gnn_model(
-        data=data, d_size=d_size, config_path=Path(config_path), exp_name="Test"
+        data=data, d_size=d_size, config_path=Path(config_path), exp_name="Test", device=device
     )
 
 

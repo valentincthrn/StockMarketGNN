@@ -21,7 +21,7 @@ class DataPrep:
         self,
         config_path: RunConfiguration,
         db: DBInterface,
-        device: "cuda",
+        device: str,
         overwrite_params: dict = None,
     ) -> None:
         # Define config file
@@ -243,7 +243,7 @@ class DataPrep:
                 # encode the position
                 pos_enc = pe(pos)
 
-                features = torch.concat((prices, pos_enc), dim=1)
+                features = torch.cat((prices, pos_enc), dim=1)
 
                 if torch.isnan(features).any():
                     print("NaN Detected In Features")

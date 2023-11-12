@@ -5,11 +5,11 @@ import torch.nn.functional as F
 
 
 class CompanyExtractor(torch.nn.Module):
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size, device):
         super(CompanyExtractor, self).__init__()
         self.lstm = torch.nn.RNN(
             input_size=input_size, hidden_size=hidden_size, num_layers=1
-        )
+        ).to(device)
 
     def forward(self, x):
         _, hn = self.lstm(x)
@@ -17,11 +17,11 @@ class CompanyExtractor(torch.nn.Module):
 
 
 class MLPWithHiddenLayer(torch.nn.Module):
-    def __init__(self, input_size, output_size):
+    def __init__(self, input_size, output_size, device):
         super(MLPWithHiddenLayer, self).__init__()
 
-        self.hidden = torch.nn.Linear(input_size, input_size)
-        self.output = torch.nn.Linear(input_size, output_size)
+        self.hidden = torch.nn.Linear(input_size, input_size).to(device)
+        self.output = torch.nn.Linear(input_size, output_size).to(device)
 
     def forward(self, x):
         x = torch.nn.functional.relu(self.hidden(x))
@@ -33,9 +33,10 @@ class MyGNN(torch.nn.Module):
         self,
         in_channels,
         out_channels,
+        device
     ):
         super(MyGNN, self).__init__()
-        self.gat_conv = GATConv(in_channels=in_channels, out_channels=out_channels)
+        self.gat_conv = GATConv(in_channels=in_channels, out_channels=out_channels).to(device)
 
     def forward(self, data):
         lstm_tensor = data
