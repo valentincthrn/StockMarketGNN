@@ -32,25 +32,26 @@ ingest:
     # - CAGR LUCROS 5 ANOS
 
 data_prep:
-  pe_t: 2
-  history: 10
+  pe_t: 30
+  history: 730
   min_points_history: 5
-  horizon_forecast: 1
+  horizon_forecast: 90
   test_days: 360
   start: 100
-  step_every: 1
+  step_every: 100
 
 hyperparams:
-  out_lstm_size: 5
-  out_gnn_size: 3
+  out_lstm_size: 50
+  out_gnn_size: 50
   criterion: "MSE"
   optimizer: "Adam"
   lr: 0.01
   scheduler: "ReduceLROnPlateau"
-  patience: 10
-  patience_stop: 50
-  factor: 0.7
-  epochs: 1000
-  pct_subset: 0.8
-  use_gnn: False
+  patience: 50
+  patience_stop: 400
+  factor: 0.8
+  epochs: 2000
+  pct_subset: 1
+  use_gnn: True
+
   
