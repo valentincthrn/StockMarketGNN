@@ -63,17 +63,23 @@ def stock_predictions(config_path: Path, ignore_ingest: bool, debug: bool, force
         ingest_data(config_path=Path(config_path), force=force)
         
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    print("SCRIPT RUNNING ON DEVICE: ", device)
 
     data_prep = DataPrep(
         config_path=Path(config_path),
         db=DBInterface(),
         device=device,
     )
-    data, d_size = data_prep.get_data()
+    data, d_size, quote_date_index_train, quote_date_index_test = data_prep.get_data()
 
     # get the data
     run_gnn_model(
-        data=data, d_size=d_size, config_path=Path(config_path), exp_name="Test", device=device
+        data=data, 
+        d_size=d_size, 
+        dt_index = (quote_date_index_train, quote_date_index_test),
+        config_path=Path(config_path), 
+        exp_name="Test", 
+        device=device
     )
 
 

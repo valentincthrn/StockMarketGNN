@@ -8,6 +8,8 @@ import torch
 from torch.optim import Adam, lr_scheduler
 import random
 from tqdm import tqdm
+import os
+from uniplot import plot
 
 
 from src.configs import RunConfiguration
@@ -22,6 +24,7 @@ logger = logging.getLogger(__name__)
 def run_gnn_model(
     data: pd.DataFrame,
     d_size: dict,
+    dt_index: tuple,
     config_path: Path,
     exp_name: str,
     device: str = "cuda",
@@ -30,6 +33,9 @@ def run_gnn_model(
     base_path_save_csv: str = "data/",
 ):
     config = RunConfiguration.from_yaml(config_path)
+    
+    PROJECT_PATH = Path(os.getcwd())
+    DATA_PATH = PROJECT_PATH / "data"
 
     if overwrite_dataprep is not None:
         for k, v in overwrite_dataprep.items():
@@ -49,6 +55,8 @@ def run_gnn_model(
         exp_id = mlflow.set_experiment(exp_name).experiment_id
 
     rid = pd.to_datetime("today").strftime("%Y%m%d%H%M%S")
+    
+    os.mkdir(DATA_PATH / rid)
 
     with mlflow.start_run(run_name=rid, experiment_id=exp_id) as run:
         logger.info("Initialize models, elements...")
@@ -108,6 +116,13 @@ def run_gnn_model(
 
         mlflow.log_params(config.data_prep)
         mlflow.log_params(config.hyperparams)
+        
+        subset_stocks = "banks"  # Top5 Random
+        subset_vars = "prices"
+        if config.hyperparams["use_gnn"]:
+            model = "with_gnn"
+        else:
+            model = "without_gnn"
 
         best_loss = np.inf
         best_pred_df = pd.DataFrame()
@@ -122,7 +137,7 @@ def run_gnn_model(
             random.shuffle(train_timesteps)
 
             for timestep in tqdm(train_timesteps):
-                loss, _, _ = run_all(
+                loss, _, _, _ = run_all(
                     data=data,
                     timestep=timestep,
                     train_or_test="train",
@@ -142,8 +157,8 @@ def run_gnn_model(
             pred_list = []
             my_gnn.eval()  # Set the model to evaluation mode
             with torch.no_grad():
-                for timestep in tqdm(test_timesteps):
-                    loss, pred, comps = run_all(
+                for k, timestep in tqdm(enumerate(test_timesteps)):
+                    loss, pred, true, comps = run_all(
                         data=data,
                         timestep=timestep,
                         train_or_test="test",
@@ -153,15 +168,26 @@ def run_gnn_model(
                         mlp_heads=mlp_heads,
                         use_gnn=config.hyperparams["use_gnn"],
                         device=device,
-
                     )
-
-                    pred_list.append(
-                        pd.DataFrame(
-                            data=dict(zip(comps, list(pred.cpu().numpy().squeeze()))),
-                            # index=[timestep],
+                    
+                    prices = {
+                        **dict(zip([comp+"_pred" for comp in comps], list(pred.cpu().numpy().squeeze()))),
+                        **dict(zip([comp+"_true" for comp in comps], list(true.cpu().numpy().squeeze()))),
+                        
+                    }
+                    
+                    df_pred = pd.DataFrame(
+                            data=prices
                         )
-                    )
+                    df_pred["last_history_date"] = [dt_index[1][k]] * config.data_prep["horizon_forecast"]
+                                        
+                    pred_list.append(df_pred)
+                    
+                    if timestep==config.data_prep["horizon_forecast"]:
+                        for j, comp in enumerate(comps):
+                            plot([df_pred[comp + "_pred"], df_pred[comp + "_true"]], legend_labels = ["pred", "true"], title = comp, width = 120)
+
+
                     total_test_loss += loss.item()
 
                 df_pred = pd.concat(pred_list)
@@ -171,6 +197,23 @@ def run_gnn_model(
                     print("Best Loss! >> ", avg_test_loss)
                     best_loss = avg_test_loss
                     best_pred_df = df_pred
+                    PATH_CSV = (
+                        "best_pred_"
+                        + str(round(best_loss, 2))
+                        + "_"
+                        + str(epoch)
+                        + "_"
+                        + subset_stocks
+                        + "_"
+                        + subset_vars
+                        + "_"
+                        + model
+                        + ".csv"
+                    )
+                    
+                    base_path_save_csv = "data/" + str(rid) + "/"
+
+                    df_pred.to_csv(base_path_save_csv + PATH_CSV)
                 else:
                     stop_count += 1
                 if stop_count == config.hyperparams["patience_stop"]:
@@ -189,13 +232,6 @@ def run_gnn_model(
             mlflow.log_metric("Validation Loss", avg_test_loss)
             list_test_loss.append(avg_test_loss)
 
-        subset_stocks = "banks"  # Top5 Random
-        subset_vars = "prices"
-        if config.hyperparams["use_gnn"]:
-            model = "with_gnn"
-        else:
-            model = "without_gnn"
-
         mlflow.log_param("Stocks", subset_stocks)
         mlflow.log_param(
             "Variable", subset_vars
@@ -213,5 +249,7 @@ def run_gnn_model(
             + model
             + ".csv"
         )
+        
+        base_path_save_csv = "data/" + str(rid) + "/"
 
         best_pred_df.to_csv(base_path_save_csv + PATH_CSV)

@@ -47,9 +47,9 @@ class DataPrep:
         df_macro = self._extract_macro()
 
         logger.info("Creating Data Dictionnary")
-        data = self._run_extraction(df_prices_with_fund, df_macro)
+        data, quote_date_index_train, quote_date_index_test = self._run_extraction(df_prices_with_fund, df_macro)
 
-        return data, d_size
+        return data, d_size, quote_date_index_train, quote_date_index_test
 
     def _extract_prices_and_fund(self):
         logger.info(">> Extracting Prices")
@@ -190,6 +190,9 @@ class DataPrep:
         N = df_prices_with_fund.shape[0]
 
         data = {"train": {}, "test": {}, "pred": {}, "macro": {}}
+        
+        quote_date_index_train = []
+        quote_date_index_test = []
 
         for t in tqdm(
             range(
@@ -206,7 +209,7 @@ class DataPrep:
                 horizon=hyperparam["horizon_forecast"],
                 min_points=hyperparam["min_points_history"],
             )
-
+            
             if df_prices.drop(["diff", "order"], axis=1).empty:
                 continue
 
@@ -256,7 +259,10 @@ class DataPrep:
 
             if t < hyperparam["test_days"]:
                 data["test"][t] = d_t
+                quote_date_index_test.append(df_prices.index[0])
+                
             else:
                 data["train"][t] = d_t
+                quote_date_index_train.append(df_prices.index[0])
 
-        return data
+        return data, quote_date_index_train, quote_date_index_test

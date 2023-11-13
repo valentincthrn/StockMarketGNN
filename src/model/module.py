@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class CompanyExtractor(torch.nn.Module):
     def __init__(self, input_size, hidden_size, device):
         super(CompanyExtractor, self).__init__()
-        self.lstm = torch.nn.RNN(
+        self.lstm = torch.nn.GRU(
             input_size=input_size, hidden_size=hidden_size, num_layers=1
         ).to(device)
 
@@ -37,11 +37,12 @@ class MyGNN(torch.nn.Module):
     ):
         super(MyGNN, self).__init__()
         self.gat_conv = GATConv(in_channels=in_channels, out_channels=out_channels).to(device)
+        self.device = device
 
     def forward(self, data):
         lstm_tensor = data
         nbr_nodes = lstm_tensor.shape[0]
-        edge_index = torch.combinations(torch.arange(nbr_nodes)).t()
+        edge_index = torch.combinations(torch.arange(nbr_nodes)).t().to(self.device)
 
         x = self.gat_conv(lstm_tensor, edge_index)
         x = F.relu(x)
