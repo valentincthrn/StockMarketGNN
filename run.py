@@ -1,6 +1,7 @@
 import click
 from pathlib import Path
 import os, time
+import torch
 
 from src.utils.db import DBInterface
 from src.ingest.main import ingest_data
@@ -67,6 +68,7 @@ def stock_predictions(config_path: Path, ignore_ingest: bool, debug: bool, force
     data_prep = DataPrep(
         config_path=Path(config_path),
         db=DBInterface(),
+        device=device,
     )
     data, d_size, quote_date_index_train, quote_date_index_test = data_prep.get_data()
 
@@ -77,7 +79,7 @@ def stock_predictions(config_path: Path, ignore_ingest: bool, debug: bool, force
         dt_index = (quote_date_index_train, quote_date_index_test),
         config_path=Path(config_path), 
         exp_name="Test", 
-        device=device
+        device=device,
     )
 
 
