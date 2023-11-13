@@ -27,7 +27,6 @@ def run_gnn_model(
     dt_index: tuple,
     config_path: Path,
     exp_name: str,
-    device: str = "cuda",
     overwrite_dataprep: dict = None,
     overwrite_hyperparams: dict = None,
     base_path_save_csv: str = "data/",
@@ -66,7 +65,6 @@ def run_gnn_model(
                 comp: CompanyExtractor(
                     size + config.data_prep["pe_t"],
                     config.hyperparams["out_lstm_size"],
-                    device = device,
                 )
                 for comp, size in d_size.items()
             }
@@ -79,7 +77,7 @@ def run_gnn_model(
         mlp_heads = ModuleDict(
             {
                 comp: MLPWithHiddenLayer(
-                    in_channels_mlp + macro_size, config.data_prep["horizon_forecast"], device
+                    in_channels_mlp + macro_size, config.data_prep["horizon_forecast"]
                 )
                 for comp in d_size.keys()
             }
@@ -88,7 +86,6 @@ def run_gnn_model(
         my_gnn = MyGNN(
             in_channels=config.hyperparams["out_lstm_size"],
             out_channels=config.hyperparams["out_gnn_size"],
-            device = device, 
         )
 
         # Define a loss function and optimizer
@@ -146,8 +143,6 @@ def run_gnn_model(
                     my_gnn=my_gnn,
                     mlp_heads=mlp_heads,
                     use_gnn=config.hyperparams["use_gnn"],
-                    device = device,
-
                 )
 
                 total_train_loss += loss.item()
