@@ -84,7 +84,7 @@ def run_mlp_heads_separatly(
         if macro is None:
             gnn_with_macro = out_gnn_comp_i
         else:
-            gnn_with_macro = torch.concatenate([out_gnn_comp_i, macro])
+            gnn_with_macro = torch.cat([out_gnn_comp_i, macro])
 
         price_comp_i = mlp_heads[comp](gnn_with_macro)
         price_outputs_time_t.append(price_comp_i)
