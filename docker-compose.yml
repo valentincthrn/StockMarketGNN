@@ -7,8 +7,6 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all  # This line ensures that all NVIDIA devices are visible inside the container
     volumes:
       - .:/workspace
-      - "./mlruns:/mlruns" # This line ensures that the mlruns folder is visible inside the container
-      - "./data:/workspace/data" # This line ensures that the data folder is visible inside the container
     working_dir: /workspace
     ports:
-      - "5000:5000" # This line exposes port 5000 of the container to port 5000 of the host machine     
+      - "8501:8501" # Exposes Streamlit's default port 8501
