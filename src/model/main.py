@@ -119,8 +119,8 @@ def run_gnn_model(
         mlflow.log_params(config.data_prep)
         mlflow.log_params(config.hyperparams)
         
-        subset_stocks = "banks"  # Top5 Random
-        subset_vars = "prices"
+        subset_stocks = "random"  # Top5 Random
+        subset_vars = "prices_fund_macro"
         if config.hyperparams["use_gnn"]:
             model = "with_gnn"
         else:
