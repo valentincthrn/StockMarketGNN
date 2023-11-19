@@ -28,7 +28,7 @@ class DBInterface:
         self._target_db_location = (
             db_path if db_path else self.base_db_path / "stock_datastore.sqlite"
         )
-        self._target_db_location_str = str(self._target_db_location )
+        self._target_db_location_str = str(self._target_db_location)
 
     def initialize_db(self, force: bool = False) -> None:
         """

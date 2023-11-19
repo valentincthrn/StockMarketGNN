@@ -36,7 +36,9 @@ class MyGNN(torch.nn.Module):
         device,
     ):
         super(MyGNN, self).__init__()
-        self.gat_conv = GATConv(in_channels=in_channels, out_channels=out_channels).to(device)
+        self.gat_conv = GATConv(in_channels=in_channels, out_channels=out_channels).to(
+            device
+        )
         self.device = device
 
     def forward(self, data):

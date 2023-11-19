@@ -47,7 +47,9 @@ def run_all(
     return loss, pred, true, comps
 
 
-def run_lstm_separatly(lstm_dict: torch.nn.ModuleDict, data_t: dict, device:str) -> torch.tensor:
+def run_lstm_separatly(
+    lstm_dict: torch.nn.ModuleDict, data_t: dict, device: str
+) -> torch.tensor:
     out_lstm = []
     comps = []
 
@@ -73,7 +75,7 @@ def run_mlp_heads_separatly(
     comps: list,
     pred_t: dict,
     macro: torch.tensor,
-    device:str,
+    device: str,
 ) -> torch.tensor:
     # Run each MLP separatly
     price_outputs_time_t = []

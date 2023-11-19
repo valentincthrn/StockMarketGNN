@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PyTorch Geometric and other Python dependencies
-RUN pip install torch-geometric numpy pandas scikit-learn jupyter click mlflow yfinance tqdm DadosAbertosBrasil
+RUN pip install torch-geometric numpy pandas scikit-learn jupyter click mlflow yfinance tqdm DadosAbertosBrasil black
 
 COPY . /workspace
 

@@ -33,7 +33,7 @@ def run_gnn_model(
     base_path_save_csv: str = "data/",
 ):
     config = RunConfiguration.from_yaml(config_path)
-    
+
     PROJECT_PATH = Path(os.getcwd())
     DATA_PATH = PROJECT_PATH / "data"
 
@@ -55,7 +55,7 @@ def run_gnn_model(
         exp_id = mlflow.set_experiment(exp_name).experiment_id
 
     rid = pd.to_datetime("today").strftime("%Y%m%d%H%M%S")
-    
+
     os.mkdir(DATA_PATH / rid)
 
     with mlflow.start_run(run_name=rid, experiment_id=exp_id) as run:
@@ -79,7 +79,7 @@ def run_gnn_model(
         mlp_heads = ModuleDict(
             {
                 comp: MLPWithHiddenLayer(
-                    in_channels_mlp + macro_size, 
+                    in_channels_mlp + macro_size,
                     config.data_prep["horizon_forecast"],
                     device,
                 )
@@ -90,7 +90,7 @@ def run_gnn_model(
         my_gnn = MyGNN(
             in_channels=config.hyperparams["out_lstm_size"],
             out_channels=config.hyperparams["out_gnn_size"],
-            device = device,
+            device=device,
         )
 
         # Define a loss function and optimizer
@@ -118,7 +118,7 @@ def run_gnn_model(
 
         mlflow.log_params(config.data_prep)
         mlflow.log_params(config.hyperparams)
-        
+
         subset_stocks = "random"  # Top5 Random
         subset_vars = "prices_fund_macro"
         if config.hyperparams["use_gnn"]:
@@ -148,7 +148,7 @@ def run_gnn_model(
                     my_gnn=my_gnn,
                     mlp_heads=mlp_heads,
                     use_gnn=config.hyperparams["use_gnn"],
-                    device=device, 
+                    device=device,
                 )
 
                 total_train_loss += loss.item()
@@ -170,24 +170,37 @@ def run_gnn_model(
                         use_gnn=config.hyperparams["use_gnn"],
                         device=device,
                     )
-                    
-                    prices = {
-                        **dict(zip([comp+"_pred" for comp in comps], list(pred.cpu().numpy().squeeze()))),
-                        **dict(zip([comp+"_true" for comp in comps], list(true.cpu().numpy().squeeze()))),
-                        
-                    }
-                    
-                    df_pred = pd.DataFrame(
-                            data=prices
-                        )
-                    df_pred["last_history_date"] = [dt_index[1][k]] * config.data_prep["horizon_forecast"]
-                                        
-                    pred_list.append(df_pred)
-                    
-                    if timestep==config.data_prep["horizon_forecast"]:
-                        for j, comp in enumerate(comps):
-                            plot([df_pred[comp + "_pred"], df_pred[comp + "_true"]], legend_labels = ["pred", "true"], title = comp, width = 120)
 
+                    prices = {
+                        **dict(
+                            zip(
+                                [comp + "_pred" for comp in comps],
+                                list(pred.cpu().numpy().squeeze()),
+                            )
+                        ),
+                        **dict(
+                            zip(
+                                [comp + "_true" for comp in comps],
+                                list(true.cpu().numpy().squeeze()),
+                            )
+                        ),
+                    }
+
+                    df_pred = pd.DataFrame(data=prices)
+                    df_pred["last_history_date"] = [dt_index[1][k]] * config.data_prep[
+                        "horizon_forecast"
+                    ]
+
+                    pred_list.append(df_pred)
+
+                    if timestep == config.data_prep["horizon_forecast"]:
+                        for j, comp in enumerate(comps):
+                            plot(
+                                [df_pred[comp + "_pred"], df_pred[comp + "_true"]],
+                                legend_labels=["pred", "true"],
+                                title=comp,
+                                width=120,
+                            )
 
                     total_test_loss += loss.item()
 
@@ -211,7 +224,7 @@ def run_gnn_model(
                         + model
                         + ".csv"
                     )
-                    
+
                     base_path_save_csv = "data/" + str(rid) + "/"
 
                     df_pred.to_csv(base_path_save_csv + PATH_CSV)
@@ -250,7 +263,7 @@ def run_gnn_model(
             + model
             + ".csv"
         )
-        
+
         base_path_save_csv = "data/" + str(rid) + "/"
 
         best_pred_df.to_csv(base_path_save_csv + PATH_CSV)
