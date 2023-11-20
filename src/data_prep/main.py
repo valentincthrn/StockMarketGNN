@@ -297,3 +297,22 @@ class DataPrep:
 
         st.success("Data Preparation Completed")
         return data, quote_date_index_train, quote_date_index_test
+
+    def get_future_data(self, st_progress=False):
+        return self._extract_future_data(st_progress=st_progress)
+
+    def _extract_future_data(self, st_progress):
+        logger.info("Extracting Prices and Fundamentals Indicators")
+        df_prices_with_fund, d_size = self._extract_prices_and_fund()
+
+        df_macro = pd.DataFrame()
+        if not self.config.ingest["macro_indicators"] is None:
+            logger.info("Extracting Macro-Economical Indicators")
+            df_macro = self._extract_macro()
+
+        logger.info("Creating Data Dictionnary")
+        data, quote_date_index_train, quote_date_index_test = self._run_extraction(
+            df_prices_with_fund, df_macro, st_progress
+        )
+
+        return data, d_size, quote_date_index_train, quote_date_index_test

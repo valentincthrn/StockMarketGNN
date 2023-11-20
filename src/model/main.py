@@ -138,9 +138,7 @@ def run_gnn_model(
             model = "without_gnn"
 
         best_loss = np.inf
-        best_pred_df = pd.DataFrame()
         stop_count = 0
-        best_model = None
         list_test_loss = []
         list_train_loss = []
 
@@ -282,7 +280,6 @@ def run_gnn_model(
                     stop_count = 0
                     print("Best Loss! >> ", avg_test_loss)
                     best_loss = avg_test_loss
-                    best_pred_df = df_pred
                     torch.save(
                         lstm_models.state_dict(), MODEL_PATH / rid / "lstm_models.pt"
                     )

@@ -179,3 +179,4 @@ pyrightconfig.json
 db/stock_datastore.sqlite
 mlruns/
 data/
+models/

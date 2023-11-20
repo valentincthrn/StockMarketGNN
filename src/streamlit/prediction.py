@@ -3,10 +3,19 @@ import glob
 import pandas as pd
 import yaml
 import streamlit as st
+from pathlib import Path
+import torch
+
+from src.prediction.main import (
+    prepare_data_for_prediction,
+    initialize_models,
+    initialize_weights,
+)
 
 
 # Function to display the prediction page
 def prediction_page():
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     st.title("Run Future Predictions")
 
     st.header("Model Summary")
@@ -22,12 +31,40 @@ def prediction_page():
         query = st.multiselect("Please select model ids to run", df_model_str["select"])
         submit_button = st.form_submit_button("Run the predictions")
 
-    if submit_button:
-        st.write("Getting the data")
+    models_to_test = df_model_str.loc[
+        lambda f: f["select"].isin(query), "select"
+    ].tolist()
 
-        st.write(
-            f"{df_model_str.loc[lambda f: f['select'].isin(query), 'id'].tolist()}"
-        )
+    if submit_button:
+        for selected_model in models_to_test:
+            st.info(f"Getting the data for {selected_model}")
+
+            df_sub = df_model_str.loc[
+                lambda f: f["select"] == selected_model, ["id", "model_name"]
+            ]
+            subfolder_name = (
+                df_sub["id"].values[0] + "_" + df_sub["model_name"].values[0]
+            )
+
+            run_config_path = Path(f"models/{subfolder_name}/run_config.yml")
+
+            data, d_size = prepare_data_for_prediction(run_config_path)
+
+            st.write(data.keys())
+            st.write(data["train"].keys())
+            st.write(data["train"][490]["itub4"].shape)
+
+            if len(data["macro"]) == 0:
+                macro_size = 0
+            else:
+                macro_size = next(iter(data["macro"].values())).shape[0]
+
+            models_trio_init = initialize_models(
+                run_config_path, subfolder_name, device, d_size, macro_size
+            )
+
+            model_trio = initialize_weights(models_trio_init, subfolder_name)
+            st.success("Models Initialized Sucessfully")
 
 
 def extract_model_info(models_dir):
