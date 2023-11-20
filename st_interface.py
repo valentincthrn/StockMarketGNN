@@ -4,6 +4,8 @@ import numpy as np
 
 from src.utils.db import DBInterface
 from src.streamlit.ingest import extract_current_stocks_data
+from src.ingest.stock import ingest_data_local
+from src.ingest.macroeco import ingest_macroeco_data
 
 db = DBInterface()
 
@@ -57,7 +59,7 @@ def ingest_data_page():
         df_macro_ingestion = macro_status_df[["indicators"]]
         df_macro_ingestion["to_ingest"] = True
 
-        st.data_editor(
+        df_macro_ingestion = st.data_editor(
             df_macro_ingestion,
             column_config={
                 "to_ingest": st.column_config.CheckboxColumn(
@@ -104,7 +106,8 @@ def ingest_data_page():
     df_to_ingest_grid = df_to_ingest.copy()
     st.table(df_to_ingest_grid)
 
-    ingest_btn = st.button("Ingesting", use_container_width=True)
+    ingest_stock_btn = st.button("Ingesting Stocks Data", use_container_width=True)
+    ingest_macro_btn = st.button("Ingesting Macro Data", use_container_width=True)
     remove_btn = st.button(
         "TEST > Removing 3 last quote dates",
         use_container_width=True,
@@ -123,13 +126,17 @@ def ingest_data_page():
             st.error("Failed to remove quotes. Please check logs for more details.")
 
     # Button logic (as an example)
-    if ingest_btn:
-        st.write("Ingesting so stocks >")
-        ingest_stocks_data(
-            stocks=df_stocks_ingestion[df_stocks_ingestion["to_ingest"]][
-                "symbol"
-            ].tolist()
+    if ingest_stock_btn:
+        st.write("Ingesting stocks ....")
+        ingest_data_local(df_to_ingest["symbol"].tolist(), db=db, st_res=True)
+        st.success("Successfully ingested for the selected symbols.")
+
+    if ingest_macro_btn:
+        st.write("Ingesting Macro Indicators ...")
+        ingest_macroeco_data(
+            df_macro_ingestion["indicators"].tolist(), db=db, st_res=True
         )
+        st.success("Successfully ingested for the selected symbols.")
 
 
 # Function to display the model building page

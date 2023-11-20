@@ -2,22 +2,39 @@ import logging
 from tqdm import tqdm
 from DadosAbertosBrasil import ipea
 import pandas as pd
+import streamlit as st
 from datetime import datetime
 
-from typing import Dict
+from typing import List
 from src.utils.db import DBInterface
 
 logger = logging.getLogger(__name__)
 
 
-def ingest_macroeco_data(target_indicators: Dict[str, str], db: DBInterface) -> None:
+def ingest_macroeco_data(
+    target_indicators: List[str], db: DBInterface, st_res: bool
+) -> None:
     # get the already exist
     macrodata_existing = db.execute_statement(
         "SELECT indicators, MAX(quote_date) FROM macro GROUP BY indicators"
     )
     dict_macrodata_max_date = {res[0]: res[1] for res in macrodata_existing}
 
-    for ind, codigo in tqdm(target_indicators.items(), desc="MacroEco Indicators"):
+    NAME2CODE = {
+        "Risco-Brasil": "JPM366_EMBI366",
+        "PIB": "BM12_PIB12",
+        "Dolar": "BM12_ERC12",
+        "Selic Over": "BM12_TJOVER12",
+        "IPCA": "PRECOS12_IPCAG12",
+    }
+
+    target_indicators_with_cd = {}
+    for s in target_indicators:
+        target_indicators_with_cd[s] = NAME2CODE[s]
+
+    for ind, codigo in tqdm(
+        target_indicators_with_cd.items(), desc="MacroEco Indicators"
+    ):
         # Get Data
         df_ind = pd.DataFrame(ipea.Serie(codigo).valores)
         df_ind = df_ind.rename(columns={"data": "quote_date"}).dropna()
@@ -45,6 +62,8 @@ def ingest_macroeco_data(target_indicators: Dict[str, str], db: DBInterface) -> 
 
         if df_ind_new.empty:
             logger.info(f"{ind} macroeconomic data already up-to-date")
+            if st_res:
+                st.info(f"{ind} macroeconomic data already up-to-date")
         else:
             db.df_to_sql(
                 pdf=df_ind_new, tablename="macro", if_exists="append", index=False
@@ -52,3 +71,7 @@ def ingest_macroeco_data(target_indicators: Dict[str, str], db: DBInterface) -> 
             logger.info(
                 f"{ind}: {len(df_ind_new)} timestamps added from {df_ind_new['quote_date'].min()} loaded succesfully"
             )
+            if st_res:
+                st.success(
+                    f"{ind}: {len(df_ind_new)} timestamps added from {df_ind_new['quote_date'].min()} loaded succesfully"
+                )

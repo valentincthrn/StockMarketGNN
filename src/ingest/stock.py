@@ -1,10 +1,12 @@
 from pathlib import Path
 import logging
+import streamlit as st
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
-from urllib.error import HTTPError
 from typing import List
+from requests.exceptions import HTTPError
+
 
 from src.utils.db import DBInterface
 from src.configs import RunConfiguration, DATE_FORMAT
@@ -12,7 +14,7 @@ from src.configs import RunConfiguration, DATE_FORMAT
 logger = logging.getLogger(__name__)
 
 
-def ingest_data_local(target_list: List[str], db: DBInterface) -> None:
+def ingest_data_local(target_list: List[str], db: DBInterface, st_res=False) -> None:
     """
     Set up a new local instance SQLite database
     and update it with the most recent files
@@ -38,14 +40,23 @@ def ingest_data_local(target_list: List[str], db: DBInterface) -> None:
         ticker = yf.Ticker(s)
 
         # check if the ticker exists
+        work = False
         try:
             info = ticker.info
+            work = True
         except HTTPError:
             logger.info(f"{s} is not an existing symbol in yahoo finance")
+            if st_res:
+                st.error(f"{s} is not an existing symbol in yahoo finance")
+                continue
+        except Exception as e:
+            logger.info(f"Stock {s} has Unknown error: {e}")
+            if st_res:
+                st.error(f"Stock {s} has Unknown error: {e}")
             continue
 
         # new symbol to load metadata
-        if s not in symbol_metadata_existing:
+        if (s not in symbol_metadata_existing) & (work):
             # loading metadata if not exist
             db.commit_many(
                 "INSERT INTO stocks_metadata "
@@ -62,6 +73,8 @@ def ingest_data_local(target_list: List[str], db: DBInterface) -> None:
                 ),
             )
             logger.info(f"{s} metadata loaded succesfully")
+            if st_res:
+                st.success(f"{s} metadata loaded succesfully")
 
         # new symbol to load stocks information
         if s not in symbol_stocks_existing:
@@ -73,10 +86,14 @@ def ingest_data_local(target_list: List[str], db: DBInterface) -> None:
             logger.info(
                 f"{s}: {len(df_history)} timestamps added from {df_history['quote_date'].min()} loaded succesfully"
             )
+            if st_res:
+                st.success(
+                    f"{s}: {len(df_history)} timestamps added from {df_history['quote_date'].min()} loaded succesfully"
+                )
 
         # otherwise, update the stocks informations
         else:
-            update_db(db, ticker)
+            update_db(db, ticker, st_res=st_res)
 
 
 def prepare_history(ticker: yf.Ticker) -> pd.DataFrame:
@@ -104,7 +121,7 @@ def prepare_history(ticker: yf.Ticker) -> pd.DataFrame:
     return df_history
 
 
-def update_db(db: DBInterface, ticker: yf.Ticker, limit: int = 2) -> None:
+def update_db(db: DBInterface, ticker: yf.Ticker, st_res: bool, limit: int = 2) -> None:
     """Given a ticker, update its prices in the SQL if needed.
     We load the prices until 2 days ago to ensure that the prices ingested are reliable
 
@@ -139,4 +156,16 @@ def update_db(db: DBInterface, ticker: yf.Ticker, limit: int = 2) -> None:
     df_history = prepare_history(ticker)
     df_to_add = df_history.loc[~df_history["quote_date"].isin(quote_dates)]
     db.df_to_sql(pdf=df_to_add, tablename="stocks", if_exists="append", index=False)
-    logger.info(f"{len(df_to_add)} new timestamps add for {symbol} updated succesfully")
+
+    if len(df_to_add) > 0:
+        logger.info(
+            f"{len(df_to_add)} new timestamps add for {symbol} updated succesfully"
+        )
+        if st_res:
+            st.success(
+                f"{len(df_to_add)} new timestamps add for {symbol} updated succesfully"
+            )
+    else:
+        logger.info(f"{symbol} already up-to-date")
+        if st_res:
+            st.info(f"{symbol} already up-to-date!")
