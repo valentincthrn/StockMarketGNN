@@ -8,8 +8,7 @@ from src.utils.db import DBInterface
 from src.streamlit.ingest import extract_current_stocks_data
 from src.ingest.stock import ingest_data_local
 from src.ingest.macroeco import ingest_macroeco_data
-
-# from src.model.main import run_gnn_model
+from src.model.main import run_gnn_model
 from src.data_prep.main import DataPrep
 
 
@@ -174,15 +173,15 @@ def build_model_page():
         ) = data_prep.get_data(st_progress=True)
 
         # get the data
-        # run_gnn_model(
-        #     data=data,
-        #     d_size=d_size,
-        #     dt_index=(quote_date_index_train, quote_date_index_test),
-        #     config_path=Path(config_path),
-        #     exp_name="Test",
-        #     device=device,
-        # )
-        # Add your model building logic here
+        run_gnn_model(
+            data=data,
+            d_size=d_size,
+            dt_index=(quote_date_index_train, quote_date_index_test),
+            config_path=Path("params/run_config.yml"),
+            exp_name="Test",
+            device=device,
+            st_plot=True,
+        )
 
 
 # Function to display the prediction page

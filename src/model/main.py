@@ -9,7 +9,8 @@ from torch.optim import Adam, lr_scheduler
 import random
 from tqdm import tqdm
 import os
-from uniplot import plot
+import matplotlib.pyplot as plt
+import streamlit as st
 
 
 from src.configs import RunConfiguration
@@ -28,6 +29,7 @@ def run_gnn_model(
     config_path: Path,
     exp_name: str,
     device: str,
+    st_plot: bool = False,
     overwrite_dataprep: dict = None,
     overwrite_hyperparams: dict = None,
     base_path_save_csv: str = "data/",
@@ -131,12 +133,20 @@ def run_gnn_model(
         stop_count = 0
         list_test_loss = []
 
+        if st_plot:
+            progress_text = "Model Training in progress. Please wait."
+            my_bar = st.progress(0, text=progress_text)
+
         for epoch in range(config.hyperparams["epochs"]):
             total_train_loss = 0.0
             total_test_loss = 0.0
             train_timesteps = list(data["train"].keys())[:int_subset]
             test_timesteps = list(data["test"].keys())
             random.shuffle(train_timesteps)
+
+            if st_plot:
+                pct = int(epoch * 100 / config.hyperparams["epochs"])
+                my_bar.progress(pct, text=progress_text)
 
             for timestep in tqdm(train_timesteps):
                 loss, _, _, _ = run_all(
@@ -193,14 +203,23 @@ def run_gnn_model(
 
                     pred_list.append(df_pred)
 
-                    if timestep == config.data_prep["horizon_forecast"]:
-                        for j, comp in enumerate(comps):
-                            plot(
-                                [df_pred[comp + "_pred"], df_pred[comp + "_true"]],
-                                legend_labels=["pred", "true"],
-                                title=comp,
-                                width=120,
+                    if st_plot:
+                        if timestep == config.data_prep["horizon_forecast"]:
+                            fig, axs = plt.subplots(
+                                len(comps), 1, figsize=(10, 5 * len(comps))
                             )
+
+                            for j, comp in enumerate(comps):
+                                axs[j].plot(
+                                    df_pred.index, df_pred[comp + "_pred"], label="pred"
+                                )
+                                axs[j].plot(
+                                    df_pred.index, df_pred[comp + "_true"], label="true"
+                                )
+                                axs[j].set_title(f"{comp} for epoch {epoch}")
+                                axs[j].legend()
+
+                            st.pyplot(fig)
 
                     total_test_loss += loss.item()
 

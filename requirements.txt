@@ -10,3 +10,5 @@ tqdm
 DadosAbertosBrasil
 black
 streamlit
+matplotlib
+uniplot
