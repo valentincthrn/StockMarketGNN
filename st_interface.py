@@ -1,11 +1,17 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import torch
+from pathlib import Path
 
 from src.utils.db import DBInterface
 from src.streamlit.ingest import extract_current_stocks_data
 from src.ingest.stock import ingest_data_local
 from src.ingest.macroeco import ingest_macroeco_data
+
+# from src.model.main import run_gnn_model
+from src.data_prep.main import DataPrep
+
 
 db = DBInterface()
 
@@ -143,10 +149,39 @@ def ingest_data_page():
 def build_model_page():
     st.title("Build New Model")
     # Example: Parameters for building a model
-    param1 = st.slider("Parameter 1", 0, 100, 50)
-    param2 = st.selectbox("Parameter 2", ["Option 1", "Option 2", "Option 3"])
+    history = st.slider("History", 0, 2000, 730)
+    horizon_forecast = st.slider("Horizon Forecast", 0, 200, 90)
+    overwrite_params = {
+        "history": history,
+        "horizon_forecast": horizon_forecast,
+    }
+
     if st.button("Build Model"):
-        st.write("Model built with parameters:", param1, param2)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        data_prep = DataPrep(
+            config_path=Path("params/run_config.yml"),
+            db=DBInterface(),
+            device=device,
+            overwrite_params=overwrite_params,
+        )
+
+        (
+            data,
+            d_size,
+            quote_date_index_train,
+            quote_date_index_test,
+        ) = data_prep.get_data(st_progress=True)
+
+        # get the data
+        # run_gnn_model(
+        #     data=data,
+        #     d_size=d_size,
+        #     dt_index=(quote_date_index_train, quote_date_index_test),
+        #     config_path=Path(config_path),
+        #     exp_name="Test",
+        #     device=device,
+        # )
         # Add your model building logic here
 
 

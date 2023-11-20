@@ -5,6 +5,7 @@ from pathlib import Path
 from tqdm import tqdm
 import numpy as np
 import torch
+import streamlit as st
 
 from src.utils.db import DBInterface
 from src.configs import RunConfiguration
@@ -36,10 +37,10 @@ class DataPrep:
         project_path = Path(os.getcwd())
         self.data_path = project_path / "data"
 
-    def get_data(self):
-        return self._extract_data()
+    def get_data(self, st_progress=False):
+        return self._extract_data(st_progress=st_progress)
 
-    def _extract_data(self):
+    def _extract_data(self, st_progress):
         logger.info("Extracting Prices and Fundamentals Indicators")
         df_prices_with_fund, d_size = self._extract_prices_and_fund()
 
@@ -48,7 +49,7 @@ class DataPrep:
 
         logger.info("Creating Data Dictionnary")
         data, quote_date_index_train, quote_date_index_test = self._run_extraction(
-            df_prices_with_fund, df_macro
+            df_prices_with_fund, df_macro, st_progress
         )
 
         return data, d_size, quote_date_index_train, quote_date_index_test
@@ -176,6 +177,7 @@ class DataPrep:
         self,
         df_prices_with_fund: pd.DataFrame,
         df_macro: pd.DataFrame,
+        st_progress: bool,
     ):
         if not df_macro.empty:
             df_macro = (
@@ -196,6 +198,18 @@ class DataPrep:
         quote_date_index_train = []
         quote_date_index_test = []
 
+        if st_progress:
+            progress_text = "Data Preparation in progress. Please wait."
+            my_bar = st.progress(0, text=progress_text)
+
+        tot_loop = (
+            N
+            - (hyperparam["start"] + hyperparam["history"])
+            - hyperparam["horizon_forecast"]
+        )
+        tot_loop = tot_loop // hyperparam["step_every"]
+        loop = 0
+
         for t in tqdm(
             range(
                 hyperparam["horizon_forecast"],
@@ -203,6 +217,10 @@ class DataPrep:
                 self.config.data_prep["step_every"],
             )
         ):
+            loop += 1
+            if st_progress:
+                pct = int(loop * 100 / tot_loop)
+                my_bar.progress(pct, text=progress_text)
             # extract prices history, futures and companies name
             df_prices, y, companies = add_time_component(
                 df=df_prices_with_fund,
@@ -269,4 +287,5 @@ class DataPrep:
                 data["train"][t] = d_t
                 quote_date_index_train.append(df_prices.index[0])
 
+        st.success("Data Preparation Completed")
         return data, quote_date_index_train, quote_date_index_test
