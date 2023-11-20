@@ -3,16 +3,17 @@ import pandas as pd
 
 from src.streamlit.ingest import extract_current_stocks_data
 
+
 # Function to display the data ingestion page
 def ingest_data_page():
     st.title("Data Ingestion")
-    
+
     # Call the function to get the stock status DataFrame
     stock_status_df, macro_status_df = extract_current_stocks_data()
-    
+
     # Display the DataFrame in Streamlit
     st.header("Data Status")
-    
+
     # Use st.columns to create a layout with 2 columns
     col1, col2 = st.columns(2)
 
@@ -23,13 +24,13 @@ def ingest_data_page():
     with col2:
         st.subheader("Macro Status")
         st.dataframe(macro_status_df, use_container_width=True)
-        
+
     # Display the DataFrame in Streamlit
     st.header("Ingestion")
-    
+
     # Use st.columns to create a layout with 2 columns
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.subheader("Stocks Ingestion")
         df_stocks_ingestion = stock_status_df[["symbol", "name"]]
@@ -64,34 +65,50 @@ def ingest_data_page():
             disabled=["widgets"],
             hide_index=True,
         )
-        
-    # Custom CSS to inject for styling the buttons
-    st.markdown("""
-        <style>
-        div.stButton > button:first-child {
-            background-color: #4CAF50; 
-            color: white;
-        }
-        div.stButton > button:last-child {
-            background-color: #f44336; 
-            color: white;
-            width: 33%;
-        }
-        </style>""", unsafe_allow_html=True)
+
+    # Form for adding new stocks
+    with st.form("add_stock_form"):
+        st.subheader("Add New Stock")
+        new_stock_symbol = st.text_input("Stock Symbol")
+        submit_button = st.form_submit_button("Add Stock")
+
+        if submit_button and new_stock_symbol:
+            # Append the new stock to the stock_status_df
+            new_stock_data = {"symbol": new_stock_symbol, "name": "-"}
+            df_stocks_ingestion = df_stocks_ingestion.append(
+                new_stock_data, ignore_index=True
+            )
+            df_stocks_ingestion = df_stocks_ingestion.drop_duplicates(subset=["symbol"])
+
+    # Use st.columns to create a layout with 2 columns
+    col1, col2 = st.columns([3, 1])
 
     # Layout with two buttons
-    col1, col2 = st.columns([3,1])
     with col1:
-        ingest_btn = st.button("Ingest")
+        st.subheader("Stocks To Ingest")
+        st.write(df_stocks_ingestion["name"])
+        ingest_btn = st.button("Ingesting", use_container_width=True)
     with col2:
-        remove_btn = st.button("Remove 3 last dates")
+        remove_btn = st.button(
+            "TEST > Removing 3 last quote dates",
+            use_container_width=True,
+            type="primary",
+        )
 
     # Button logic (as an example)
     if ingest_btn:
-        st.write("Ingest button clicked")
+        st.write("Ingesting these stocks >")
+
+    # Filter stocks to be ingested
+    stocks_to_ingest = df_stocks_ingestion[df_stocks_ingestion["to_ingest"]]
+
+    # Create and display the grid
+    fig = create_stock_grid(stocks_to_ingest)
+    st.pyplot(fig)
 
     if remove_btn:
         st.write("Remove button clicked")
+
 
 # Function to display the model building page
 def build_model_page():
@@ -102,6 +119,7 @@ def build_model_page():
     if st.button("Build Model"):
         st.write("Model built with parameters:", param1, param2)
         # Add your model building logic here
+
 
 # Function to display the prediction page
 def prediction_page():
@@ -118,10 +136,13 @@ def prediction_page():
         st.write("Running predictions using:", selected_model)
         # Add your prediction logic here
 
+
 # Main app logic
 def main():
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Choose a Page", ["Ingest Data", "Build Model", "Predictions"])
+    page = st.sidebar.radio(
+        "Choose a Page", ["Ingest Data", "Build Model", "Predictions"]
+    )
 
     if page == "Ingest Data":
         ingest_data_page()
@@ -129,6 +150,7 @@ def main():
         build_model_page()
     elif page == "Predictions":
         prediction_page()
+
 
 if __name__ == "__main__":
     main()
