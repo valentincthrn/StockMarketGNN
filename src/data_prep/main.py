@@ -32,9 +32,9 @@ class DataPrep:
         # Define config file
         self.config = RunConfiguration.from_yaml(config_path)
 
-        self.config.target_stocks = target_stocks
-        self.config.macro_indicators = macros
-        self.config.fundamental_indicators = fund_indicators
+        self.config.ingest["target_stocks"] = target_stocks
+        self.config.ingest["macro_indicators"] = macros
+        self.config.ingest["fundamental_indicators"] = fund_indicators
 
         self.db = db
         self.device = device
@@ -54,7 +54,7 @@ class DataPrep:
         df_prices_with_fund, d_size = self._extract_prices_and_fund()
 
         df_macro = pd.DataFrame()
-        if not self.config.macro_indicators is None:
+        if not self.config.ingest["macro_indicators"] is None:
             logger.info("Extracting Macro-Economical Indicators")
             df_macro = self._extract_macro()
 
@@ -70,7 +70,7 @@ class DataPrep:
         df_prices = self._extract_prices()
 
         df_fund = pd.DataFrame()
-        if not self.config.fundamental_indicators is None:
+        if not self.config.ingest["fundamental_indicators"] is None:
             logger.info(">> Extracting Fundamentals Indicators")
             df_fund = self._extract_fund()
 

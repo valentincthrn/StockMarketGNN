@@ -7,6 +7,7 @@ from datetime import datetime
 
 from typing import List
 from src.utils.db import DBInterface
+from src.configs import MACRO_MAPPING
 
 logger = logging.getLogger(__name__)
 
@@ -20,17 +21,9 @@ def ingest_macroeco_data(
     )
     dict_macrodata_max_date = {res[0]: res[1] for res in macrodata_existing}
 
-    NAME2CODE = {
-        "Risco-Brasil": "JPM366_EMBI366",
-        "PIB": "BM12_PIB12",
-        "Dolar": "BM12_ERC12",
-        "Selic Over": "BM12_TJOVER12",
-        "IPCA": "PRECOS12_IPCAG12",
-    }
-
     target_indicators_with_cd = {}
     for s in target_indicators:
-        target_indicators_with_cd[s] = NAME2CODE[s]
+        target_indicators_with_cd[s] = MACRO_MAPPING[s]
 
     for ind, codigo in tqdm(
         target_indicators_with_cd.items(), desc="MacroEco Indicators"

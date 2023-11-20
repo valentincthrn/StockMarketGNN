@@ -157,10 +157,12 @@ def build_model_page():
         "horizon_forecast": horizon_forecast,
     }
     use_gnn = st.checkbox("Use GNN")
+    epochs = st.slider("Epochs", 0, 100, 50)
 
     st.subheader("Features Selections")
     overwrite_params_model = {
         "use_gnn": use_gnn,
+        "epochs": epochs,
     }
     stocks_options = st.selectbox(
         "Which groups of stocks do you want to see?", ("Banks", "Distincts", "Others")
@@ -226,9 +228,9 @@ def build_model_page():
             data=data,
             d_size=d_size,
             dt_index=(quote_date_index_train, quote_date_index_test),
-            config_path=Path("params/run_config.yml"),
             exp_name="Test",
             device=device,
+            config=data_prep.config,
             st_plot=True,
             overwrite_dataprep=overwrite_params,
             overwrite_hyperparams=overwrite_params_model,

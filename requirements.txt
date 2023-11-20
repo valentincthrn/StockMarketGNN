@@ -12,3 +12,4 @@ black
 streamlit
 matplotlib
 uniplot
+pyyaml

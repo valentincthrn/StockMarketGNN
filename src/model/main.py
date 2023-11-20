@@ -11,6 +11,8 @@ from tqdm import tqdm
 import os
 import matplotlib.pyplot as plt
 import streamlit as st
+import dataclasses
+import yaml
 
 
 from src.configs import RunConfiguration
@@ -26,18 +28,16 @@ def run_gnn_model(
     data: pd.DataFrame,
     d_size: dict,
     dt_index: tuple,
-    config_path: Path,
     exp_name: str,
     device: str,
+    config: RunConfiguration,
     st_plot: bool = False,
     overwrite_dataprep: dict = None,
     overwrite_hyperparams: dict = None,
     base_path_save_csv: str = "data/",
 ):
-    config = RunConfiguration.from_yaml(config_path)
-
     PROJECT_PATH = Path(os.getcwd())
-    DATA_PATH = PROJECT_PATH / "data"
+    MODEL_PATH = PROJECT_PATH / "models"
 
     if overwrite_dataprep is not None:
         for k, v in overwrite_dataprep.items():
@@ -58,7 +58,15 @@ def run_gnn_model(
 
     rid = pd.to_datetime("today").strftime("%Y%m%d%H%M%S")
 
-    os.mkdir(DATA_PATH / rid)
+    os.mkdir(MODEL_PATH / rid)
+
+    # Write the config file as yaml
+    config_dict = dataclasses.asdict(config)
+    yaml_str = yaml.dump(config_dict)
+
+    # Write the YAML string to a file
+    with open(MODEL_PATH / rid / "run_config.yml", "w") as file:
+        file.write(yaml_str)
 
     with mlflow.start_run(run_name=rid, experiment_id=exp_id) as run:
         logger.info("Initialize models, elements...")
@@ -131,6 +139,7 @@ def run_gnn_model(
         best_loss = np.inf
         best_pred_df = pd.DataFrame()
         stop_count = 0
+        best_model = None
         list_test_loss = []
 
         if st_plot:
@@ -272,6 +281,14 @@ def run_gnn_model(
                     print("Best Loss! >> ", avg_test_loss)
                     best_loss = avg_test_loss
                     best_pred_df = df_pred
+                    torch.save(
+                        lstm_models.state_dict(), MODEL_PATH / rid / "lstm_models.pt"
+                    )
+                    torch.save(my_gnn.state_dict(), MODEL_PATH / rid / "my_gnn.pt")
+                    torch.save(
+                        mlp_heads.state_dict(), MODEL_PATH / rid / "mlp_heads.pt"
+                    )
+
                     PATH_CSV = (
                         "pred_"
                         + str(round(best_loss, 2))
@@ -285,10 +302,6 @@ def run_gnn_model(
                         + model
                         + ".csv"
                     )
-
-                    base_path_save_csv = "data/" + str(rid) + "/"
-
-                    df_pred.to_csv(base_path_save_csv + PATH_CSV)
                 else:
                     stop_count += 1
                 if stop_count == config.hyperparams["patience_stop"]:
@@ -316,19 +329,3 @@ def run_gnn_model(
             "Variable", subset_vars
         )  # Prices & Fundamental , Prices & Fundamental & Macro
         mlflow.log_metric("Best Test Mape", min(list_test_loss))
-
-        PATH_CSV = (
-            "best_pred_"
-            + str(round(min(list_test_loss), 2))
-            + "_"
-            + subset_stocks
-            + "_"
-            + subset_vars
-            + "_"
-            + model
-            + ".csv"
-        )
-
-        base_path_save_csv = "data/" + str(rid) + "/"
-
-        best_pred_df.to_csv(base_path_save_csv + PATH_CSV)
