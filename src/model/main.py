@@ -135,7 +135,7 @@ def run_gnn_model(
 
         if st_plot:
             progress_text = "Model Training in progress. Please wait."
-            my_bar = st.progress(0, text=progress_text)
+            my_bar_epoch = st.progress(0, text=progress_text)
 
         for epoch in range(config.hyperparams["epochs"]):
             total_train_loss = 0.0
@@ -146,9 +146,18 @@ def run_gnn_model(
 
             if st_plot:
                 pct = int(epoch * 100 / config.hyperparams["epochs"])
-                my_bar.progress(pct, text=progress_text)
+                my_bar_epoch.progress(pct, text=f"Training Epoch {epoch}")
+
+                my_bar_inside = st.progress(0, text=progress_text)
+                total_inside = len(train_timesteps)
+                i = 0
 
             for timestep in tqdm(train_timesteps):
+                if st_plot:
+                    i += 1
+                    pct = int(i * 100 / total_inside)
+                    my_bar_inside.progress(pct, text=f"Timesteps {i} for epoch {epoch}")
+
                 loss, _, _, _ = run_all(
                     data=data,
                     timestep=timestep,
@@ -205,19 +214,52 @@ def run_gnn_model(
 
                     if st_plot:
                         if timestep == config.data_prep["horizon_forecast"]:
+                            # Set the style of matplotlib to 'ggplot' for better aesthetics
+                            plt.style.use("ggplot")
+
                             fig, axs = plt.subplots(
                                 len(comps), 1, figsize=(10, 5 * len(comps))
                             )
 
+                            # Loop through each subplot and plot the data
                             for j, comp in enumerate(comps):
+                                # Setting the background color to transparent
+                                axs[j].set_facecolor("none")
                                 axs[j].plot(
-                                    df_pred.index, df_pred[comp + "_pred"], label="pred"
+                                    df_pred.index,
+                                    df_pred[comp + "_pred"],
+                                    label="pred",
+                                    linewidth=2,
                                 )
                                 axs[j].plot(
-                                    df_pred.index, df_pred[comp + "_true"], label="true"
+                                    df_pred.index,
+                                    df_pred[comp + "_true"],
+                                    label="true",
+                                    linewidth=2,
                                 )
-                                axs[j].set_title(f"{comp} for epoch {epoch}")
+                                axs[j].set_title(comp)
                                 axs[j].legend()
+
+                                # Making the frame invisible
+                                for spine in axs[j].spines.values():
+                                    spine.set_visible(False)
+
+                                # Reducing the number of ticks and labels for a cleaner look
+                                axs[j].xaxis.set_major_locator(plt.MaxNLocator(5))
+                                axs[j].yaxis.set_major_locator(plt.MaxNLocator(5))
+
+                                # Making the grid lighter and set it to be behind the plots
+                                axs[j].grid(
+                                    True,
+                                    color="gray",
+                                    linestyle="--",
+                                    linewidth=0.5,
+                                    alpha=0.7,
+                                )
+                                axs[j].set_axisbelow(True)
+
+                            # Remove the space between the subplots
+                            plt.tight_layout(pad=2)
 
                             st.pyplot(fig)
 
@@ -260,6 +302,10 @@ def run_gnn_model(
             print(
                 f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
             )
+            if st_plot:
+                st.write(
+                    f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
+                )
 
             mlflow.log_metric("Training Loss", avg_train_loss)
             mlflow.log_metric("Validation Loss", avg_test_loss)

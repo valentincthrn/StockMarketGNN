@@ -6,6 +6,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import streamlit as st
+from typing import List, Union
 
 from src.utils.db import DBInterface
 from src.configs import RunConfiguration
@@ -22,11 +23,19 @@ class DataPrep:
         self,
         config_path: RunConfiguration,
         db: DBInterface,
-        device: "cuda",
+        target_stocks: List[str],
+        fund_indicators: Union[List, None],
+        macros: Union[List, None],
+        device: str = "cuda",
         overwrite_params: dict = None,
     ) -> None:
         # Define config file
         self.config = RunConfiguration.from_yaml(config_path)
+
+        self.config.target_stocks = target_stocks
+        self.config.macro_indicators = macros
+        self.config.fundamental_indicators = fund_indicators
+
         self.db = db
         self.device = device
 
@@ -44,8 +53,10 @@ class DataPrep:
         logger.info("Extracting Prices and Fundamentals Indicators")
         df_prices_with_fund, d_size = self._extract_prices_and_fund()
 
-        logger.info("Extracting Macro-Economical Indicators")
-        df_macro = self._extract_macro()
+        df_macro = pd.DataFrame()
+        if not self.config.macro_indicators is None:
+            logger.info("Extracting Macro-Economical Indicators")
+            df_macro = self._extract_macro()
 
         logger.info("Creating Data Dictionnary")
         data, quote_date_index_train, quote_date_index_test = self._run_extraction(
@@ -58,8 +69,10 @@ class DataPrep:
         logger.info(">> Extracting Prices")
         df_prices = self._extract_prices()
 
-        logger.info(">> Extracting Fundamentals Indicators")
-        df_fund = self._extract_fund()
+        df_fund = pd.DataFrame()
+        if not self.config.fundamental_indicators is None:
+            logger.info(">> Extracting Fundamentals Indicators")
+            df_fund = self._extract_fund()
 
         logger.info(">> Merging Prices and Fundamentals Indicators")
 
@@ -122,8 +135,6 @@ class DataPrep:
     def _extract_fund(self):
         df_fund = pd.read_csv(self.data_path / "company_indicators_top5_banks.csv")
 
-        # df_fund = df_fund.loc[lambda f: abs(f["valor"]) < 1]
-
         TARGETS_LOW = [
             col.lower().replace(".sa", "")
             for col in self.config.ingest["target_stocks"]
@@ -152,12 +163,9 @@ class DataPrep:
         return df_pivot
 
     def _extract_macro(self):
-        if self.config.ingest["macro_indicators"] is None:
-            return pd.DataFrame()
-
         df_macro = self.db.read_sql(query="SELECT * FROM macro")
 
-        macro_to_keep = list(self.config.ingest["macro_indicators"].keys())
+        macro_to_keep = self.config.ingest["macro_indicators"]
         df_macro = df_macro.loc[lambda f: f["indicators"].isin(macro_to_keep)]
 
         df_macro = df_macro.loc[lambda f: abs(f["valor"]) != np.inf]
@@ -219,7 +227,7 @@ class DataPrep:
         ):
             loop += 1
             if st_progress:
-                pct = int(loop * 100 / tot_loop)
+                pct = min(int(loop * 100 / tot_loop), 100)
                 my_bar.progress(pct, text=progress_text)
             # extract prices history, futures and companies name
             df_prices, y, companies = add_time_component(
