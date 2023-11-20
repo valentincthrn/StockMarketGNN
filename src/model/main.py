@@ -57,6 +57,7 @@ def run_gnn_model(
         exp_id = mlflow.set_experiment(exp_name).experiment_id
 
     rid = pd.to_datetime("today").strftime("%Y%m%d%H%M%S")
+    rid = rid + "_" + exp_name
 
     os.mkdir(MODEL_PATH / rid)
 
@@ -141,6 +142,7 @@ def run_gnn_model(
         stop_count = 0
         best_model = None
         list_test_loss = []
+        list_train_loss = []
 
         if st_plot:
             progress_text = "Model Training in progress. Please wait."
@@ -289,19 +291,6 @@ def run_gnn_model(
                         mlp_heads.state_dict(), MODEL_PATH / rid / "mlp_heads.pt"
                     )
 
-                    PATH_CSV = (
-                        "pred_"
-                        + str(round(best_loss, 2))
-                        + "_"
-                        + str(epoch)
-                        + "_"
-                        + subset_stocks
-                        + "_"
-                        + subset_vars
-                        + "_"
-                        + model
-                        + ".csv"
-                    )
                 else:
                     stop_count += 1
                 if stop_count == config.hyperparams["patience_stop"]:
@@ -309,6 +298,18 @@ def run_gnn_model(
                         f"Stop! {config.hyperparams['patience_stop']} epochs without improving test loss"
                     )
                     break
+
+            list_train_loss.append(avg_train_loss)
+            list_test_loss.append(avg_test_loss)
+
+            res_loss = pd.DataFrame(
+                {
+                    "train_loss": list_train_loss,
+                    "test_loss": list_test_loss,
+                }
+            )
+
+            res_loss.to_csv(MODEL_PATH / rid / "loss.csv", index=False)
 
             # Update the learning rate
             scheduler.step(avg_test_loss)
@@ -322,10 +323,3 @@ def run_gnn_model(
 
             mlflow.log_metric("Training Loss", avg_train_loss)
             mlflow.log_metric("Validation Loss", avg_test_loss)
-            list_test_loss.append(avg_test_loss)
-
-        mlflow.log_param("Stocks", subset_stocks)
-        mlflow.log_param(
-            "Variable", subset_vars
-        )  # Prices & Fundamental , Prices & Fundamental & Macro
-        mlflow.log_metric("Best Test Mape", min(list_test_loss))
