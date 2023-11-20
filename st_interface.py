@@ -1,7 +1,11 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
+from src.utils.db import DBInterface
 from src.streamlit.ingest import extract_current_stocks_data
+
+db = DBInterface()
 
 
 # Function to display the data ingestion page
@@ -36,7 +40,7 @@ def ingest_data_page():
         df_stocks_ingestion = stock_status_df[["symbol", "name"]]
         df_stocks_ingestion["to_ingest"] = True
 
-        st.data_editor(
+        df_stocks_ingestion = st.data_editor(
             df_stocks_ingestion,
             column_config={
                 "to_ingest": st.column_config.CheckboxColumn(
@@ -66,48 +70,66 @@ def ingest_data_page():
             hide_index=True,
         )
 
-    # Form for adding new stocks
+    # Persistent list for new stocks
+    if "new_stock_data_list" not in st.session_state:
+        st.session_state["new_stock_data_list"] = []
+
+    # Place the reset button outside the form
+    reset_button = st.button("Reset Form")
+    if reset_button:
+        st.session_state.new_stock_data_list = []
+
     with st.form("add_stock_form"):
         st.subheader("Add New Stock")
-        new_stock_symbol = st.text_input("Stock Symbol")
+        new_stock_data = st.text_input("Stock Symbol")
         submit_button = st.form_submit_button("Add Stock")
 
-        if submit_button and new_stock_symbol:
-            # Append the new stock to the stock_status_df
-            new_stock_data = {"symbol": new_stock_symbol, "name": "-"}
-            df_stocks_ingestion = df_stocks_ingestion.append(
-                new_stock_data, ignore_index=True
+        if submit_button:
+            st.session_state.new_stock_data_list.append(new_stock_data)
+
+        if reset_button:
+            st.session_state.new_stock_data_list = []
+
+    st.subheader("Stocks To Ingest")
+
+    df_to_ingest = df_stocks_ingestion.loc[lambda f: f["to_ingest"], ["symbol"]]
+    new_stock_to_ingest = pd.DataFrame(
+        st.session_state.new_stock_data_list, columns=["symbol"]
+    )
+
+    if not new_stock_to_ingest.empty:
+        df_to_ingest = df_to_ingest.append(new_stock_to_ingest, ignore_index=True)
+
+    # complete by empty value
+    df_to_ingest_grid = df_to_ingest.copy()
+    st.table(df_to_ingest_grid)
+
+    ingest_btn = st.button("Ingesting", use_container_width=True)
+    remove_btn = st.button(
+        "TEST > Removing 3 last quote dates",
+        use_container_width=True,
+        type="primary",
+    )
+
+    if remove_btn:
+        success = db.remove_last_three_quotes(
+            df_to_ingest["symbol"].tolist()
+        )  # Modify as needed
+        if success:
+            st.success(
+                "Successfully removed the last three quotes for the selected symbols."
             )
-            df_stocks_ingestion = df_stocks_ingestion.drop_duplicates(subset=["symbol"])
-
-    # Use st.columns to create a layout with 2 columns
-    col1, col2 = st.columns([3, 1])
-
-    # Layout with two buttons
-    with col1:
-        st.subheader("Stocks To Ingest")
-        st.write(df_stocks_ingestion["name"])
-        ingest_btn = st.button("Ingesting", use_container_width=True)
-    with col2:
-        remove_btn = st.button(
-            "TEST > Removing 3 last quote dates",
-            use_container_width=True,
-            type="primary",
-        )
+        else:
+            st.error("Failed to remove quotes. Please check logs for more details.")
 
     # Button logic (as an example)
     if ingest_btn:
-        st.write("Ingesting these stocks >")
-
-    # Filter stocks to be ingested
-    stocks_to_ingest = df_stocks_ingestion[df_stocks_ingestion["to_ingest"]]
-
-    # Create and display the grid
-    fig = create_stock_grid(stocks_to_ingest)
-    st.pyplot(fig)
-
-    if remove_btn:
-        st.write("Remove button clicked")
+        st.write("Ingesting so stocks >")
+        ingest_stocks_data(
+            stocks=df_stocks_ingestion[df_stocks_ingestion["to_ingest"]][
+                "symbol"
+            ].tolist()
+        )
 
 
 # Function to display the model building page

@@ -98,3 +98,31 @@ class DBInterface:
             )
         con.close()
         return df
+
+    def remove_last_three_quotes(self, symbol_list) -> bool:
+        """
+        Removes the three most recent quote dates for each symbol in the symbol_list
+        from the 'stocks' table in the database.
+        """
+        try:
+            with sqlite3.connect(self._target_db_location_str) as con:
+                for symbol in symbol_list:
+                    query = """
+                    DELETE FROM stocks
+                    WHERE rowid IN (
+                        SELECT rowid FROM stocks
+                        WHERE symbol = ?
+                        ORDER BY quote_date DESC
+                        LIMIT 3
+                    )
+                    """
+                    con.execute(query, (symbol,))
+                con.commit()
+            logger.info("Successfully removed last three quotes for the symbols.")
+            return True
+        except sqlite3.Error as e:
+            logger.error(f"Database error: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Exception in remove_last_three_quotes: {e}")
+            return False
