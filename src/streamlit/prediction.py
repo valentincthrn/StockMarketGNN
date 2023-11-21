@@ -69,7 +69,9 @@ def prediction_page():
 
             data_t = data["train"]
             pred_t = None
-            macro = data.get("macro")
+            macro = data["macro"]
+            if len(macro) == 0:
+                macro = None
 
             # PHASE 1: LSTM EXTRACTION
             features_extracted, comps = run_lstm_separatly(
