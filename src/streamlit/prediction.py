@@ -11,6 +11,9 @@ from src.prediction.main import (
     initialize_models,
     initialize_weights,
 )
+from src.prediction.plot import plot_stock_predictions
+
+from src.model.utils import run_lstm_separatly, run_mlp_heads_separatly
 
 
 # Function to display the prediction page
@@ -20,7 +23,6 @@ def prediction_page():
 
     st.header("Model Summary")
     df_model = extract_model_info(Path("models"))
-    st.dataframe(df_model)
 
     st.header("Model Results")
     df_model_str = df_model.copy()
@@ -42,29 +44,56 @@ def prediction_page():
             df_sub = df_model_str.loc[
                 lambda f: f["select"] == selected_model, ["id", "model_name"]
             ]
+            use_gnn = df_model_str.loc[
+                lambda f: f["select"] == selected_model, ["use_gnn"]
+            ].values[0]
+
             subfolder_name = (
                 df_sub["id"].values[0] + "_" + df_sub["model_name"].values[0]
             )
 
             run_config_path = Path(f"models/{subfolder_name}/run_config.yml")
 
-            data, d_size = prepare_data_for_prediction(run_config_path)
-
-            st.write(data.keys())
-            st.write(data["train"].keys())
-            st.write(data["train"][490]["itub4"].shape)
+            data, d_size, past_data = prepare_data_for_prediction(run_config_path)
 
             if len(data["macro"]) == 0:
                 macro_size = 0
             else:
-                macro_size = next(iter(data["macro"].values())).shape[0]
+                macro_size = data["macro"].shape[0]
 
             models_trio_init = initialize_models(
                 run_config_path, subfolder_name, device, d_size, macro_size
             )
 
             model_trio = initialize_weights(models_trio_init, subfolder_name)
-            st.success("Models Initialized Sucessfully")
+
+            data_t = data["train"]
+            pred_t = None
+            macro = data.get("macro")
+
+            # PHASE 1: LSTM EXTRACTION
+            features_extracted, comps = run_lstm_separatly(
+                model_trio[0], data_t, device
+            )
+
+            # PHASE 2: GNN EXTRACTION
+            if use_gnn:
+                features_encoded = model_trio[1](features_extracted)
+            else:
+                features_encoded = features_extracted
+
+            # PHASE 3: MLP HEAD EXTRACTION
+            pred = run_mlp_heads_separatly(
+                model_trio[2],
+                features_encoded,
+                comps,
+                pred_t,
+                macro,
+                device,
+                to_pred=True,
+            )
+
+            plot_stock_predictions(past_data, pred, 400)
 
 
 def extract_model_info(models_dir):

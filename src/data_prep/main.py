@@ -10,7 +10,7 @@ from typing import List, Union
 
 from src.utils.db import DBInterface
 from src.configs import RunConfiguration
-from src.data_prep.utils import add_time_component
+from src.data_prep.utils import add_time_component, get_pred_data_with_time_comp
 from src.utils.common import PositionalEncoding
 
 logger = logging.getLogger(__name__)
@@ -287,6 +287,9 @@ class DataPrep:
             if len(d_t) == 0:
                 continue
 
+            if loop == 1:
+                st.info("Shape of the data: {}".format(d_t[companies[0]].shape))
+
             if t < hyperparam["test_days"]:
                 data["test"][t] = d_t
                 quote_date_index_test.append(df_prices.index[0])
@@ -311,8 +314,70 @@ class DataPrep:
             df_macro = self._extract_macro()
 
         logger.info("Creating Data Dictionnary")
-        data, quote_date_index_train, quote_date_index_test = self._run_extraction(
-            df_prices_with_fund, df_macro, st_progress
+        if not df_macro.empty:
+            df_macro = (
+                pd.DataFrame(df_prices_with_fund.reset_index()["quote_date"])
+                .merge(df_macro, on="quote_date", how="left")
+                .fillna(method="backfill")
+                .fillna(0)
+                .set_index("quote_date")
+            )
+
+        hyperparam = self.config.data_prep
+
+        pe = PositionalEncoding(hyperparam["pe_t"])
+
+        data_to_pred = {"train": {}, "macro": {}}
+
+        # extract prices history, futures and companies name
+        df_prices, companies = get_pred_data_with_time_comp(
+            df=df_prices_with_fund,
+            history=hyperparam["history"],
         )
 
-        return data, d_size, quote_date_index_train, quote_date_index_test
+        if not df_macro.empty:
+            macro_features = torch.tensor(
+                df_macro.iloc[0].values, dtype=torch.float
+            ).to(self.device)
+
+            if torch.isnan(macro_features).any():
+                print("NaN Detected In Macro")
+
+            data_to_pred["macro"] = macro_features
+
+        d_t = {}
+
+        past_data = {}
+
+        for col in companies:
+            # get company and order component
+            df_col = (
+                df_prices.loc[:, pd.IndexSlice[[col, "order"], :]]
+                .dropna(subset=[(col, "price")])
+                .fillna(0)
+            )
+
+            past_data[col] = df_col[(col, "price")]
+
+            # tensor
+            tensor_col = torch.tensor(df_col.values, dtype=torch.float).to(self.device)
+
+            prices = tensor_col[hyperparam["horizon_forecast"] :, :-1]
+            pos = tensor_col[hyperparam["horizon_forecast"] :, -1].unsqueeze(-1)
+
+            # encode the position
+            pos_enc = pe(pos)
+
+            features = torch.concat((prices, pos_enc), dim=1)
+
+            if torch.isnan(features).any():
+                print("NaN Detected In Features")
+
+            # add features in a list to pad later
+            d_t[col] = features
+
+            data_to_pred["train"] = d_t
+
+        st.success("Data Preparation Completed")
+
+        return data_to_pred, d_size, past_data

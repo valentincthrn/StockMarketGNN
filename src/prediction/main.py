@@ -1,6 +1,7 @@
 from pathlib import Path
 import torch
 from torch.nn import ModuleDict
+import streamlit as st
 
 from src.configs import RunConfiguration
 from src.utils.db import DBInterface
@@ -76,6 +77,6 @@ def prepare_data_for_prediction(
         overwrite_params=None,
     )
 
-    data_to_pred, d_size, _, _ = data_prep.get_future_data(st_progress=True)
+    data_to_pred, d_size, past_data = data_prep.get_future_data(st_progress=True)
 
-    return data_to_pred, d_size
+    return data_to_pred, d_size, past_data

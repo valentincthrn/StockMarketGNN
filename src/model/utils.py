@@ -76,6 +76,7 @@ def run_mlp_heads_separatly(
     pred_t: dict,
     macro: torch.tensor,
     device: str,
+    to_pred: bool = False,
 ) -> torch.tensor:
     # Run each MLP separatly
     price_outputs_time_t = []
@@ -83,6 +84,7 @@ def run_mlp_heads_separatly(
 
     for k, comp in enumerate(comps):
         out_gnn_comp_i = features_encoded[k].to(device)
+
         if macro is None:
             gnn_with_macro = out_gnn_comp_i
         else:
@@ -90,10 +92,15 @@ def run_mlp_heads_separatly(
 
         price_comp_i = mlp_heads[comp](gnn_with_macro)
         price_outputs_time_t.append(price_comp_i)
-        pred_output_time_t.append(pred_t[comp])
+
+        if not to_pred:
+            pred_output_time_t.append(pred_t[comp])
 
     # Concatenate the outputs frm the LSTM
     pred = torch.stack(price_outputs_time_t, dim=0)
+
+    if to_pred:
+        return pred
 
     # Prepare ground truth from d_pred for the current timestep
     true = torch.tensor(pred_output_time_t).reshape_as(pred).float().to(device)
