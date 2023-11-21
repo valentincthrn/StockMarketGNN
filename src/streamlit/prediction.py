@@ -23,6 +23,7 @@ def prediction_page():
 
     st.header("Model Summary")
     df_model = extract_model_info(Path("models"))
+    st.dataframe(df_model)
 
     st.header("Model Results")
     df_model_str = df_model.copy()
