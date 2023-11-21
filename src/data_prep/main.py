@@ -23,18 +23,21 @@ class DataPrep:
         self,
         config_path: RunConfiguration,
         db: DBInterface,
-        target_stocks: List[str],
-        fund_indicators: Union[List, None],
-        macros: Union[List, None],
+        target_stocks: Union[List[str], None] = None,
+        fund_indicators: Union[List, None] = None,
+        macros: Union[List, None] = None,
         device: str = "cuda",
         overwrite_params: dict = None,
     ) -> None:
         # Define config file
         self.config = RunConfiguration.from_yaml(config_path)
 
-        self.config.ingest["target_stocks"] = target_stocks
-        self.config.ingest["macro_indicators"] = macros
-        self.config.ingest["fundamental_indicators"] = fund_indicators
+        if not target_stocks is None:
+            self.config.ingest["target_stocks"] = target_stocks
+        if not macros is None:
+            self.config.ingest["macro_indicators"] = macros
+        if not fund_indicators is None:
+            self.config.ingest["fundamental_indicators"] = fund_indicators
 
         self.db = db
         self.device = device

@@ -34,7 +34,6 @@ def run_gnn_model(
     st_plot: bool = False,
     overwrite_dataprep: dict = None,
     overwrite_hyperparams: dict = None,
-    base_path_save_csv: str = "data/",
 ):
     PROJECT_PATH = Path(os.getcwd())
     MODEL_PATH = PROJECT_PATH / "models"
@@ -61,6 +60,8 @@ def run_gnn_model(
 
     os.mkdir(MODEL_PATH / rid)
 
+    # TODO (VC): Function to save config file
+
     # Write the config file as yaml
     config_dict = dataclasses.asdict(config)
     yaml_str = yaml.dump(config_dict)
@@ -71,6 +72,8 @@ def run_gnn_model(
 
     with mlflow.start_run(run_name=rid, experiment_id=exp_id) as run:
         logger.info("Initialize models, elements...")
+
+        # TODO (VC): Function to initilize  models
 
         lstm_models = ModuleDict(
             {
@@ -126,16 +129,6 @@ def run_gnn_model(
 
         logger.info("Training the model...")
         int_subset = int(config.hyperparams["pct_subset"] * len(data["train"]))
-
-        mlflow.log_params(config.data_prep)
-        mlflow.log_params(config.hyperparams)
-
-        subset_stocks = "random"  # Top5 Random
-        subset_vars = "prices_fund_macro"
-        if config.hyperparams["use_gnn"]:
-            model = "with_gnn"
-        else:
-            model = "without_gnn"
 
         best_loss = np.inf
         stop_count = 0
@@ -221,6 +214,7 @@ def run_gnn_model(
 
                     pred_list.append(df_pred)
 
+                    # TODO (VC): Function to plot
                     if st_plot:
                         if timestep == config.data_prep["horizon_forecast"]:
                             # Set the style of matplotlib to 'ggplot' for better aesthetics
@@ -317,6 +311,3 @@ def run_gnn_model(
                 st.write(
                     f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
                 )
-
-            mlflow.log_metric("Training Loss", avg_train_loss)
-            mlflow.log_metric("Validation Loss", avg_test_loss)

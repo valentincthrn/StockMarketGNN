@@ -35,6 +35,13 @@ def cli():
     help="Whether to ignore the ingestion",
 )
 @click.option(
+    "-e",
+    "--exp-name",
+    default="Test",
+    type=click.STRING,
+    help="Name of the experiment",
+)
+@click.option(
     "--debug/--no-debug",
     default=False,
     type=click.BOOL,
@@ -46,7 +53,9 @@ def cli():
     type=click.BOOL,
     help="Force regenerating the SQL database",
 )
-def stock_predictions(config_path: Path, ignore_ingest: bool, debug: bool, force: bool):
+def stock_predictions(
+    config_path: Path, ignore_ingest: bool, exp_name: str, debug: bool, force: bool
+):
     """Ingesting data to Big Query by getting last data (for prediction purpose)
     or loading past data (fill the database)
 
@@ -61,7 +70,7 @@ def stock_predictions(config_path: Path, ignore_ingest: bool, debug: bool, force
     if not ignore_ingest:
         # ingest locally the data in the db
         ingest_data(config_path=Path(config_path), force=force)
-        
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("SCRIPT RUNNING ON DEVICE: ", device)
 
@@ -74,11 +83,11 @@ def stock_predictions(config_path: Path, ignore_ingest: bool, debug: bool, force
 
     # get the data
     run_gnn_model(
-        data=data, 
-        d_size=d_size, 
-        dt_index = (quote_date_index_train, quote_date_index_test),
-        config_path=Path(config_path), 
-        exp_name="Test", 
+        data=data,
+        d_size=d_size,
+        dt_index=(quote_date_index_train, quote_date_index_test),
+        config=data_prep.config,
+        exp_name="Test",
         device=device,
     )
 
