@@ -77,9 +77,6 @@ class DataPrep:
             logger.info(">> Extracting Fundamentals Indicators")
             df_fund = self._extract_fund()
 
-        logger.info(">> Merging Prices and Fundamentals Indicators")
-
-        if not df_fund.empty:
             df_prices["year"] = df_prices.index.year
             df_merge = df_prices.merge(
                 df_fund,

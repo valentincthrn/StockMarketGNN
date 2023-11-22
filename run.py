@@ -80,6 +80,7 @@ def stock_predictions(
         device=device,
     )
     data, d_size, quote_date_index_train, quote_date_index_test = data_prep.get_data()
+    print(d_size)
 
     # get the data
     run_gnn_model(
