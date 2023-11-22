@@ -2,15 +2,18 @@ from pathlib import Path
 import logging
 import pandas as pd
 import numpy as np
+from torch.nn import ModuleDict
 import torch
 from torch.optim import Adam, lr_scheduler
 import random
 from tqdm import tqdm
 import os
+import matplotlib.pyplot as plt
 import streamlit as st
 
 
 from src.configs import RunConfiguration
+from src.model.module import CompanyExtractor, MyGNN, MLPWithHiddenLayer
 from src.model.utils import run_all
 from src.utils.logs import log_errors
 from src.streamlit.build_model import plot_training_pred
@@ -63,6 +66,38 @@ def run_gnn_model(
         device=device,
         d_size=d_size,
         macro_size=macro_size,
+    )
+
+    lstm_models = ModuleDict(
+        {
+            comp: CompanyExtractor(
+                size + config.data_prep["pe_t"],
+                config.hyperparams["out_lstm_size"],
+                device=device,
+            )
+            for comp, size in d_size.items()
+        }
+    )
+    if config.hyperparams["use_gnn"]:
+        in_channels_mlp = config.hyperparams["out_gnn_size"]
+    else:
+        in_channels_mlp = config.hyperparams["out_lstm_size"]
+
+    mlp_heads = ModuleDict(
+        {
+            comp: MLPWithHiddenLayer(
+                in_channels_mlp + macro_size,
+                config.data_prep["horizon_forecast"],
+                device,
+            )
+            for comp in d_size.keys()
+        }
+    )
+
+    my_gnn = MyGNN(
+        in_channels=config.hyperparams["out_lstm_size"],
+        out_channels=config.hyperparams["out_gnn_size"],
+        device=device,
     )
 
     # Define a loss function and optimizer
