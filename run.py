@@ -3,11 +3,13 @@ from pathlib import Path
 import os, time
 import torch
 
+from src.configs import GROUPS
 from src.utils.db import DBInterface
 from src.ingest.main import ingest_data
 from src.utils.logs import configure_logs
 from src.data_prep.main import DataPrep
 from src.model.main import run_gnn_model
+from src.configs import RunConfiguration
 
 # Setting same timezone
 os.environ["TZ"] = "America/Sao_Paulo"
@@ -35,6 +37,27 @@ def cli():
     help="Whether to ignore the ingestion",
 )
 @click.option(
+    "-s",
+    "--stocks-group",
+    default="FromConfig",
+    type=click.Choice(["Banks", "Distinct", "FromConfig"]),
+    help="Groups of stocks to use (if others, then put the stocks in the run_config.yml)",
+)
+@click.option(
+    "-m",
+    "--macro",
+    default="FromConfig",
+    type=click.Choice(["All", "FromConfig", "Not"]),
+    help="Include 'All' macro indicators, 'FromConfig' or None",
+)
+@click.option(
+    "-f",
+    "--fund",
+    default="FromConfig",
+    type=click.Choice(["All", "FromConfig", "Not"]),
+    help="Include 'All' fundamentals indicators, 'FromConfig' or None",
+)
+@click.option(
     "-e",
     "--exp-name",
     default="Test",
@@ -54,7 +77,14 @@ def cli():
     help="Force regenerating the SQL database",
 )
 def stock_predictions(
-    config_path: Path, ignore_ingest: bool, exp_name: str, debug: bool, force: bool
+    config_path: Path,
+    ignore_ingest: bool,
+    stocks_group: str,
+    macro: str,
+    fund: str,
+    exp_name: str,
+    debug: bool,
+    force: bool,
 ):
     """Ingesting data to Big Query by getting last data (for prediction purpose)
     or loading past data (fill the database)
@@ -74,13 +104,39 @@ def stock_predictions(
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("SCRIPT RUNNING ON DEVICE: ", device)
 
+    if stocks_group in ["Banks", "Distinct"]:
+        target_stocks = GROUPS[stocks_group]
+    else:
+        target_stocks = None
+
+    if macro == "All":
+        macro = ["Risco-Brasil", "PIB", "Dolar", "Selic Over", "IPCA"]
+    elif macro == "FromConfig":
+        macro = None
+    else:
+        macro = []
+
+    if fund == "All":
+        fund = ["P/L", "PL/ATIVOS", "M. EBIT", "ROA", "CAGR LUCROS 5 ANOS"]
+        if stocks_group not in ["Banks", "Distinct"]:
+            print(
+                "No fundamental indicators for stocks not in 'Banks' or 'Distinct' group"
+            )
+    elif fund == "FromConfig":
+        fund = None
+    else:
+        fund = []
+
     data_prep = DataPrep(
         config_path=Path(config_path),
         db=DBInterface(),
+        target_stocks=target_stocks,
+        fund_indicators=fund,
+        macros=macro,
         device=device,
     )
     data, d_size, quote_date_index_train, quote_date_index_test = data_prep.get_data()
-    print(d_size)
+    print("Features Size for Each Company", d_size)
 
     # get the data
     run_gnn_model(
