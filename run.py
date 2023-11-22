@@ -120,7 +120,7 @@ def stock_predictions(
             )
     elif fund == "FromConfig":
         fund = None
-    else:
+    else:  # case 'Not'
         fund = []
 
     # Define config file

@@ -17,7 +17,6 @@ def plot_training_pred(df_pred: pd.DataFrame, comps: List):
 
     # Loop through each subplot and plot the data
     for j, comp in enumerate(comps):
-        st.write(j, comp)
         # Setting the background color to transparent
         axs[j].set_facecolor("none")
         axs[j].plot(

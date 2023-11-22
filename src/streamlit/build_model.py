@@ -34,15 +34,23 @@ def build_model_page():
         "Which groups of stocks do you want to see?", ("Banks", "Distincts", "Others")
     )
 
+    use_fundamental = False
     if stocks_options == "Others":
         # Call the function to get the stock status DataFrame
         stock_status_df, _ = extract_current_stocks_data()
         stocks_selected = st.multiselect(
             "Select the groups of stocks to use", stock_status_df["symbol"].tolist()
         )
-        st.info("Can't use Fundamental for others groups!")
 
-    use_fundamental = False
+        check_in = [x for x in stocks_selected if x in GROUPS["Banks"]]
+        if len(check_in) == 0:
+            st.info("Can't use Fundamental for tickers not in the groups")
+        else:
+            st.info(
+                f"Can use Fundamental ONLY for tickers >> {check_in} << in the groups"
+            )
+            use_fundamental = st.checkbox("Use Fundamental")
+
     if stocks_options == "Banks":
         stocks_selected = GROUPS["Banks"]
         use_fundamental = st.checkbox("Use Fundamental")
@@ -95,6 +103,7 @@ def build_model_page():
             quote_date_index_train,
             quote_date_index_test,
         ) = data_prep.get_data(st_progress=True)
+        st.info(f"Data Feature For Each Company: {d_size}")
 
         # get the data
         run_gnn_model(

@@ -212,13 +212,20 @@ class DataPrep:
         tot_loop = tot_loop // hyperparam["step_every"]
         loop = 0
 
-        for t in tqdm(
-            range(
-                hyperparam["horizon_forecast"],
-                N - (hyperparam["start"] + hyperparam["history"]),
-                self.config.data_prep["step_every"],
-            )
-        ):
+        # First part of the range with step size of 1
+        range_part1 = range(hyperparam["horizon_forecast"], hyperparam["test_days"])
+
+        # Second part of the range with the desired step size
+        range_part2 = range(
+            hyperparam["test_days"],
+            N - (hyperparam["start"] + hyperparam["history"]),
+            self.config.data_prep["step_every"],
+        )
+
+        # Combine the two ranges
+        combined_range = list(range_part1) + list(range_part2)
+
+        for t in tqdm(combined_range):
             loop += 1
             if st_progress:
                 pct = min(int(loop * 100 / tot_loop), 100)
