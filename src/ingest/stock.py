@@ -121,7 +121,7 @@ def prepare_history(ticker: yf.Ticker) -> pd.DataFrame:
     return df_history
 
 
-def update_db(db: DBInterface, ticker: yf.Ticker, st_res: bool, limit: int = 2) -> None:
+def update_db(db: DBInterface, ticker: yf.Ticker, st_res: bool, limit: int = 1) -> None:
     """Given a ticker, update its prices in the SQL if needed.
     We load the prices until 2 days ago to ensure that the prices ingested are reliable
 
@@ -142,14 +142,16 @@ def update_db(db: DBInterface, ticker: yf.Ticker, st_res: bool, limit: int = 2) 
         )
     ]
 
-    # Set the maximum date we will ingest: TODAY - 2 Days
+    # Set the maximum date we will ingest: TODAY - 1 Days
     current_date_minus_2d = (datetime.now() - pd.Timedelta(days=limit)).strftime(
         DATE_FORMAT
     )
 
     # If this last day has already be ingested: pass
     if max(quote_dates) == current_date_minus_2d:
-        logger.info(f"{symbol} stocks prices up-to-date")
+        if st_res:
+            st.info(f"{symbol} already up-to-date")
+        logger.info(f"{symbol} already up-to-date")
         return
 
     # otherwise, update it to the

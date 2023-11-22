@@ -68,38 +68,6 @@ def run_gnn_model(
         macro_size=macro_size,
     )
 
-    lstm_models = ModuleDict(
-        {
-            comp: CompanyExtractor(
-                size + config.data_prep["pe_t"],
-                config.hyperparams["out_lstm_size"],
-                device=device,
-            )
-            for comp, size in d_size.items()
-        }
-    )
-    if config.hyperparams["use_gnn"]:
-        in_channels_mlp = config.hyperparams["out_gnn_size"]
-    else:
-        in_channels_mlp = config.hyperparams["out_lstm_size"]
-
-    mlp_heads = ModuleDict(
-        {
-            comp: MLPWithHiddenLayer(
-                in_channels_mlp + macro_size,
-                config.data_prep["horizon_forecast"],
-                device,
-            )
-            for comp in d_size.keys()
-        }
-    )
-
-    my_gnn = MyGNN(
-        in_channels=config.hyperparams["out_lstm_size"],
-        out_channels=config.hyperparams["out_gnn_size"],
-        device=device,
-    )
-
     # Define a loss function and optimizer
     # criterion = torch.nn.MSELoss()  # Mean Squared Error Loss for regression tasks
     if config.hyperparams["use_gnn"]:

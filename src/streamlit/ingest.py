@@ -6,6 +6,7 @@ from src.utils.db import DBInterface
 from src.configs import DATE_FORMAT
 from datetime import datetime
 
+from src.configs import GROUPS
 from src.ingest.stock import ingest_data_local
 from src.ingest.macroeco import ingest_macroeco_data
 
@@ -107,21 +108,52 @@ def ingest_data_page():
     # Display the DataFrame in Streamlit
     st.header("Ingestion")
 
+    def initialize_state():
+        if "df_stocks_ingestion" not in st.session_state:
+            st.session_state.df_stocks_ingestion = stock_status_df[["symbol", "name"]]
+            st.session_state.df_stocks_ingestion["to_ingest"] = True
+
+    # Initialize the session state
+    initialize_state()
+
     # Use st.columns to create a layout with 2 columns
     col1, col2 = st.columns(2)
 
     with col1:
         st.subheader("Stocks Ingestion")
-        df_stocks_ingestion = stock_status_df[["symbol", "name"]]
-        df_stocks_ingestion["to_ingest"] = True
-
-        df_stocks_ingestion = interactive_df_st(df_stocks_ingestion, "stocks")
+        df_stocks_ingestion = st.session_state.df_stocks_ingestion
+        interactive_df_st(df_stocks_ingestion, "stocks")
     with col2:
         st.subheader("Macro Ingestion")
         df_macro_ingestion = macro_status_df[["indicators"]]
         df_macro_ingestion["to_ingest"] = True
 
         df_macro_ingestion = interactive_df_st(df_macro_ingestion, "macro")
+
+    # Use st.columns to create a layout with 2 columns
+    col1_bt, col2_bt = st.columns(2)
+    banks_button = col1_bt.button("Preselect Only 'Banks'", use_container_width=True)
+    distinct_button = col2_bt.button(
+        "Preselect Only 'Distinct'", use_container_width=True
+    )
+    # Button logic
+    if banks_button:
+        st.session_state.df_stocks_ingestion["to_ingest"] = False
+        st.session_state.df_stocks_ingestion.loc[
+            st.session_state.df_stocks_ingestion["symbol"].isin(GROUPS["Banks"]),
+            "to_ingest",
+        ] = True
+        st.experimental_rerun()
+
+    if distinct_button:
+        st.session_state.df_stocks_ingestion["to_ingest"] = False
+        st.session_state.df_stocks_ingestion.loc[
+            st.session_state.df_stocks_ingestion["symbol"].isin(GROUPS["Distinct"]),
+            "to_ingest",
+        ] = True
+        st.experimental_rerun()
+
+    st.subheader("Add New Stocks")
 
     # Persistent list for new stocks
     if "new_stock_data_list" not in st.session_state:
@@ -133,7 +165,7 @@ def ingest_data_page():
         st.session_state.new_stock_data_list = []
 
     with st.form("add_stock_form"):
-        st.subheader("Add New Stock")
+        st.text("Write The New Stock")
         new_stock_data = st.text_input("Stock Symbol")
         submit_button = st.form_submit_button("Add Stock")
 
@@ -143,8 +175,11 @@ def ingest_data_page():
         if reset_button:
             st.session_state.new_stock_data_list = []
 
-    st.subheader("Stocks To Ingest")
-    df_to_ingest = df_stocks_ingestion.loc[lambda f: f["to_ingest"], ["symbol"]]
+    st.subheader("Final List of Stocks To Ingest")
+    df_to_ingest = st.session_state.df_stocks_ingestion.loc[
+        lambda f: f["to_ingest"], ["symbol"]
+    ]
+
     new_stock_to_ingest = pd.DataFrame(
         st.session_state.new_stock_data_list, columns=["symbol"]
     )
@@ -153,8 +188,7 @@ def ingest_data_page():
         df_to_ingest = df_to_ingest.append(new_stock_to_ingest, ignore_index=True)
 
     # complete by empty value
-    df_to_ingest_grid = df_to_ingest.copy()
-    st.table(df_to_ingest_grid)
+    st.table(df_to_ingest)
 
     ingest_stock_btn = st.button("Ingesting Stocks Data", use_container_width=True)
     ingest_macro_btn = st.button("Ingesting Macro Data", use_container_width=True)

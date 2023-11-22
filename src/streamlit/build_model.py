@@ -9,8 +9,7 @@ from src.configs import GROUPS
 from src.utils.db import DBInterface
 from src.streamlit.ingest import extract_current_stocks_data
 from src.data_prep.main import DataPrep
-
-# from src.model.main import run_gnn_model
+from src.model.main import run_gnn_model
 
 
 # Function to display the model building page
