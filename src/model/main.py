@@ -1,6 +1,5 @@
 from pathlib import Path
 import logging
-import mlflow
 import pandas as pd
 import numpy as np
 from torch.nn import ModuleDict
@@ -11,8 +10,6 @@ from tqdm import tqdm
 import os
 import matplotlib.pyplot as plt
 import streamlit as st
-import dataclasses
-import yaml
 
 
 from src.configs import RunConfiguration
@@ -20,6 +17,7 @@ from src.model.module import CompanyExtractor, MyGNN, MLPWithHiddenLayer
 from src.model.utils import run_all
 from src.utils.logs import log_errors
 from src.streamlit.build_model import plot_training_pred
+from src.utils.common import save_yaml_config
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +49,6 @@ def run_gnn_model(
     else:
         macro_size = next(iter(data["macro"].values())).shape[0]
 
-    # try:
-    #     exp_id = mlflow.create_experiment(exp_name)
-    # except:
-    #     exp_id = mlflow.set_experiment(exp_name).experiment_id
-
     rid = pd.to_datetime("today").strftime("%Y%m%d%H%M%S")
     rid = rid + "_" + exp_name
 
@@ -63,15 +56,8 @@ def run_gnn_model(
 
     # TODO (VC): Function to save config file
 
-    # Write the config file as yaml
-    config_dict = dataclasses.asdict(config)
-    yaml_str = yaml.dump(config_dict)
+    save_yaml_config(config=config, MODEL_PATH_RID=MODEL_PATH / rid)
 
-    # Write the YAML string to a file
-    with open(MODEL_PATH / rid / "run_config.yml", "w") as file:
-        file.write(yaml_str)
-
-    # with mlflow.start_run(run_name=rid, experiment_id=exp_id) as run:
     logger.info("Initialize models, elements...")
 
     # TODO (VC): Function to initilize  models

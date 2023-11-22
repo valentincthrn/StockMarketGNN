@@ -1,5 +1,11 @@
 import math
 import torch
+from pathlib import Path
+import dataclasses
+import yaml
+
+
+from src.configs import RunConfiguration
 
 
 def mape_loss(x, y):
@@ -13,6 +19,16 @@ def calculate_mape(true_values, pred_values):
     # Avoid division by zero
     mask = true_values != 0
     return 100 * (abs((true_values - pred_values) / true_values)[mask].mean())
+
+
+def save_yaml_config(config: RunConfiguration, MODEL_PATH_RID: Path):
+    # Write the config file as yaml
+    config_dict = dataclasses.asdict(config)
+    yaml_str = yaml.dump(config_dict)
+
+    # Write the YAML string to a file
+    with open(MODEL_PATH_RID / "run_config.yml", "w") as file:
+        file.write(yaml_str)
 
 
 class PositionalEncoding(torch.nn.Module):
