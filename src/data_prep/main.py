@@ -21,7 +21,7 @@ class DataPrep:
 
     def __init__(
         self,
-        config_path: RunConfiguration,
+        config: RunConfiguration,
         db: DBInterface,
         target_stocks: Union[List[str], None] = None,
         fund_indicators: Union[List, None] = None,
@@ -30,21 +30,7 @@ class DataPrep:
         overwrite_params: dict = None,
     ) -> None:
         # Define config file
-        self.config = RunConfiguration.from_yaml(config_path)
-
-        if not target_stocks is None:
-            self.config.ingest["target_stocks"] = target_stocks
-        if not macros is None:
-            if len(macros) == 0:
-                self.config.ingest["macro_indicators"] = None
-            else:
-                self.config.ingest["macro_indicators"] = macros
-        if not fund_indicators is None:
-            if len(fund_indicators) == 0:
-                self.config.ingest["fundamental_indicators"] = None
-            else:
-                self.config.ingest["fundamental_indicators"] = fund_indicators
-
+        self.config = config
         self.db = db
         self.device = device
 

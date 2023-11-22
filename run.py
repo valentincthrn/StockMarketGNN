@@ -97,10 +97,6 @@ def stock_predictions(
 
     configure_logs(logs_folder="output/_data_update", debug=debug)
 
-    if not ignore_ingest:
-        # ingest locally the data in the db
-        ingest_data(config_path=Path(config_path), force=force)
-
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("SCRIPT RUNNING ON DEVICE: ", device)
 
@@ -127,8 +123,28 @@ def stock_predictions(
     else:
         fund = []
 
+    # Define config file
+    config = RunConfiguration.from_yaml(config_path)
+
+    if not target_stocks is None:
+        config.ingest["target_stocks"] = target_stocks
+    if not macro is None:
+        if len(macro) == 0:
+            config.ingest["macro_indicators"] = None
+        else:
+            config.ingest["macro_indicators"] = macro
+    if not fund is None:
+        if len(fund) == 0:
+            config.ingest["fundamental_indicators"] = None
+        else:
+            config.ingest["fundamental_indicators"] = fund
+
+    if not ignore_ingest:
+        # ingest locally the data in the db
+        ingest_data(config=config, force=force)
+
     data_prep = DataPrep(
-        config_path=Path(config_path),
+        config=config,
         db=DBInterface(),
         target_stocks=target_stocks,
         fund_indicators=fund,

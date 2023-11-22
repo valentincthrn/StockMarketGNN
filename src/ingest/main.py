@@ -9,7 +9,7 @@ from src.ingest.macroeco import ingest_macroeco_data
 logger = logging.getLogger(__name__)
 
 
-def ingest_data(config_path: Path, force: bool = False) -> None:
+def ingest_data(config: RunConfiguration, force: bool = False) -> None:
     """
     Set up a new local instance SQLite database
     and update stocks prices and macroeconomical indicators
@@ -20,9 +20,6 @@ def ingest_data(config_path: Path, force: bool = False) -> None:
     :param force: flag if we should force re-generating the database, defaults to False
     :type force: bool, optional
     """
-    # Define config file
-    config = RunConfiguration.from_yaml(config_path)
-
     # initialize the database
     db = DBInterface()
     db.initialize_db(force)

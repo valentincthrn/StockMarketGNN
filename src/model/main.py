@@ -134,6 +134,8 @@ def run_gnn_model(
 
         pred_list = []
         my_gnn.eval()  # Set the model to evaluation mode
+        st.write(test_timesteps)
+        logger.info(test_timesteps)
         with torch.no_grad():
             for k, timestep in tqdm(enumerate(test_timesteps)):
                 loss, pred, true, comps = run_all(
@@ -147,6 +149,10 @@ def run_gnn_model(
                     use_gnn=config.hyperparams["use_gnn"],
                     device=device,
                 )
+                logger.info(timestep)
+                logger.info(comps)
+                logger.info(loss)
+                logger.info(pred)
 
                 prices = {
                     **dict(
@@ -163,39 +169,42 @@ def run_gnn_model(
                     ),
                 }
 
+                st.write(prices)
+
                 df_pred = pd.DataFrame(data=prices)
+
+                st.write(df_pred)
                 df_pred["last_history_date"] = [dt_index[1][k]] * config.data_prep[
                     "horizon_forecast"
                 ]
 
+                st.dataframe(df_pred)
+
                 pred_list.append(df_pred)
 
-                # TODO (VC): Function to plot
                 if timestep == config.data_prep["horizon_forecast"]:
                     if st_plot:
                         plot_training_pred(df_pred, comps)
 
                 total_test_loss += loss.item()
 
-            df_pred = pd.concat(pred_list)
-            avg_test_loss = total_test_loss / len(test_timesteps)
-            if avg_test_loss < best_loss:
-                stop_count = 0
-                print("Best Loss! >> ", avg_test_loss)
-                best_loss = avg_test_loss
-                torch.save(
-                    lstm_models.state_dict(), MODEL_PATH / rid / "lstm_models.pt"
-                )
-                torch.save(my_gnn.state_dict(), MODEL_PATH / rid / "my_gnn.pt")
-                torch.save(mlp_heads.state_dict(), MODEL_PATH / rid / "mlp_heads.pt")
+        df_pred = pd.concat(pred_list)
+        avg_test_loss = total_test_loss / len(test_timesteps)
+        if avg_test_loss < best_loss:
+            stop_count = 0
+            print("Best Loss! >> ", avg_test_loss)
+            best_loss = avg_test_loss
+            torch.save(lstm_models.state_dict(), MODEL_PATH / rid / "lstm_models.pt")
+            torch.save(my_gnn.state_dict(), MODEL_PATH / rid / "my_gnn.pt")
+            torch.save(mlp_heads.state_dict(), MODEL_PATH / rid / "mlp_heads.pt")
 
-            else:
-                stop_count += 1
-            if stop_count == config.hyperparams["patience_stop"]:
-                logger.info(
-                    f"Stop! {config.hyperparams['patience_stop']} epochs without improving test loss"
-                )
-                break
+        else:
+            stop_count += 1
+        if stop_count == config.hyperparams["patience_stop"]:
+            logger.info(
+                f"Stop! {config.hyperparams['patience_stop']} epochs without improving test loss"
+            )
+            break
 
         list_train_loss.append(avg_train_loss)
         list_test_loss.append(avg_test_loss)
