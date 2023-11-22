@@ -2,6 +2,7 @@ from pathlib import Path
 import torch
 from torch.nn import ModuleDict
 import streamlit as st
+from typing import Union
 
 from src.configs import RunConfiguration
 from src.utils.db import DBInterface
@@ -10,9 +11,14 @@ from src.model.module import CompanyExtractor, MyGNN, MLPWithHiddenLayer
 
 
 def initialize_models(
-    config_path: Path, subfolder_name: str, device: str, d_size: dict, macro_size: int
+    config: Union[Path, RunConfiguration], device: str, d_size: dict, macro_size: int
 ):
-    config = RunConfiguration.from_yaml(config_path)
+    if config is Path:
+        config = RunConfiguration.from_yaml(config)
+    elif config is RunConfiguration:
+        pass
+    else:
+        raise ValueError("config must be a Path or a RunConfiguration object")
 
     # Initialize the models
     lstm_models = ModuleDict(

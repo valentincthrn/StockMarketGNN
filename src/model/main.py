@@ -18,6 +18,7 @@ from src.model.utils import run_all
 from src.utils.logs import log_errors
 from src.streamlit.build_model import plot_training_pred
 from src.utils.common import save_yaml_config
+from src.prediction.main import initialize_models
 
 logger = logging.getLogger(__name__)
 
@@ -54,13 +55,18 @@ def run_gnn_model(
 
     os.mkdir(MODEL_PATH / rid)
 
-    # TODO (VC): Function to save config file
-
     save_yaml_config(config=config, MODEL_PATH_RID=MODEL_PATH / rid)
 
     logger.info("Initialize models, elements...")
 
     # TODO (VC): Function to initilize  models
+
+    lstm_models, my_gnn, mlp_heads = initialize_models(
+        config=config,
+        device=device,
+        d_size=d_size,
+        macro_size=macro_size,
+    )
 
     lstm_models = ModuleDict(
         {
