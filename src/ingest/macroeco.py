@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def ingest_macroeco_data(
-    target_indicators: List[str], db: DBInterface, st_res: bool
+    target_indicators: List[str], db: DBInterface, st_res: bool = False
 ) -> None:
     # get the already exist
     macrodata_existing = db.execute_statement(
