@@ -2,21 +2,18 @@ from pathlib import Path
 import logging
 import pandas as pd
 import numpy as np
-from torch.nn import ModuleDict
 import torch
 from torch.optim import Adam, lr_scheduler
 import random
 from tqdm import tqdm
 import os
-import matplotlib.pyplot as plt
 import streamlit as st
 
 
 from src.configs import RunConfiguration
-from src.model.module import CompanyExtractor, MyGNN, MLPWithHiddenLayer
 from src.model.utils import run_all
 from src.utils.logs import log_errors
-from src.streamlit.build_model import plot_training_pred
+from src.streamlit.utils import plot_training_pred
 from src.utils.common import save_yaml_config
 from src.prediction.main import initialize_models
 
@@ -58,8 +55,6 @@ def run_gnn_model(
     save_yaml_config(config=config, MODEL_PATH_RID=MODEL_PATH / rid)
 
     logger.info("Initialize models, elements...")
-
-    # TODO (VC): Function to initilize  models
 
     lstm_models, my_gnn, mlp_heads = initialize_models(
         config=config,
