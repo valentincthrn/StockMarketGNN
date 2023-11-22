@@ -23,7 +23,7 @@ def build_model_page():
         "horizon_forecast": horizon_forecast,
     }
     use_gnn = st.checkbox("Use GNN")
-    epochs = st.slider("Epochs", 0, 100, 50)
+    epochs = st.slider("Epochs", 0, 100, 5)
 
     st.subheader("Features Selections")
     overwrite_params_model = {

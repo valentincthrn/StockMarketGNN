@@ -76,9 +76,6 @@ def prepare_data_for_prediction(
     data_prep = DataPrep(
         config=Path(config_path),
         db=DBInterface(),
-        target_stocks=config.ingest["target_stocks"],
-        fund_indicators=config.ingest["fundamental_indicators"],
-        macros=config.ingest["macro_indicators"],
         device=device,
         overwrite_params=None,
     )
