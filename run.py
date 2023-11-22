@@ -87,7 +87,7 @@ def stock_predictions(
         d_size=d_size,
         dt_index=(quote_date_index_train, quote_date_index_test),
         config=data_prep.config,
-        exp_name="Test",
+        exp_name=exp_name,
         device=device,
     )
 

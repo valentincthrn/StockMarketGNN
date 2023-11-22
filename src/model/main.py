@@ -50,10 +50,10 @@ def run_gnn_model(
     else:
         macro_size = next(iter(data["macro"].values())).shape[0]
 
-    try:
-        exp_id = mlflow.create_experiment(exp_name)
-    except:
-        exp_id = mlflow.set_experiment(exp_name).experiment_id
+    # try:
+    #     exp_id = mlflow.create_experiment(exp_name)
+    # except:
+    #     exp_id = mlflow.set_experiment(exp_name).experiment_id
 
     rid = pd.to_datetime("today").strftime("%Y%m%d%H%M%S")
     rid = rid + "_" + exp_name
@@ -70,100 +70,120 @@ def run_gnn_model(
     with open(MODEL_PATH / rid / "run_config.yml", "w") as file:
         file.write(yaml_str)
 
-    with mlflow.start_run(run_name=rid, experiment_id=exp_id) as run:
-        logger.info("Initialize models, elements...")
+    # with mlflow.start_run(run_name=rid, experiment_id=exp_id) as run:
+    logger.info("Initialize models, elements...")
 
-        # TODO (VC): Function to initilize  models
+    # TODO (VC): Function to initilize  models
 
-        lstm_models = ModuleDict(
-            {
-                comp: CompanyExtractor(
-                    size + config.data_prep["pe_t"],
-                    config.hyperparams["out_lstm_size"],
-                    device=device,
-                )
-                for comp, size in d_size.items()
-            }
-        )
-        if config.hyperparams["use_gnn"]:
-            in_channels_mlp = config.hyperparams["out_gnn_size"]
-        else:
-            in_channels_mlp = config.hyperparams["out_lstm_size"]
+    lstm_models = ModuleDict(
+        {
+            comp: CompanyExtractor(
+                size + config.data_prep["pe_t"],
+                config.hyperparams["out_lstm_size"],
+                device=device,
+            )
+            for comp, size in d_size.items()
+        }
+    )
+    if config.hyperparams["use_gnn"]:
+        in_channels_mlp = config.hyperparams["out_gnn_size"]
+    else:
+        in_channels_mlp = config.hyperparams["out_lstm_size"]
 
-        mlp_heads = ModuleDict(
-            {
-                comp: MLPWithHiddenLayer(
-                    in_channels_mlp + macro_size,
-                    config.data_prep["horizon_forecast"],
-                    device,
-                )
-                for comp in d_size.keys()
-            }
-        )
+    mlp_heads = ModuleDict(
+        {
+            comp: MLPWithHiddenLayer(
+                in_channels_mlp + macro_size,
+                config.data_prep["horizon_forecast"],
+                device,
+            )
+            for comp in d_size.keys()
+        }
+    )
 
-        my_gnn = MyGNN(
-            in_channels=config.hyperparams["out_lstm_size"],
-            out_channels=config.hyperparams["out_gnn_size"],
-            device=device,
-        )
+    my_gnn = MyGNN(
+        in_channels=config.hyperparams["out_lstm_size"],
+        out_channels=config.hyperparams["out_gnn_size"],
+        device=device,
+    )
 
-        # Define a loss function and optimizer
-        # criterion = torch.nn.MSELoss()  # Mean Squared Error Loss for regression tasks
-        if config.hyperparams["use_gnn"]:
-            list_gnn = list(my_gnn.parameters())
-        else:
-            list_gnn = []
-        optimizer = Adam(
-            list(lstm_models.parameters()) + list_gnn + list(mlp_heads.parameters()),
-            lr=config.hyperparams["lr"],
-        )
+    # Define a loss function and optimizer
+    # criterion = torch.nn.MSELoss()  # Mean Squared Error Loss for regression tasks
+    if config.hyperparams["use_gnn"]:
+        list_gnn = list(my_gnn.parameters())
+    else:
+        list_gnn = []
+    optimizer = Adam(
+        list(lstm_models.parameters()) + list_gnn + list(mlp_heads.parameters()),
+        lr=config.hyperparams["lr"],
+    )
 
-        # Learning rate scheduler
-        scheduler = lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            "min",
-            patience=config.hyperparams["patience"],
-            factor=config.hyperparams["factor"],
-            verbose=True,
-        )
+    # Learning rate scheduler
+    scheduler = lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        "min",
+        patience=config.hyperparams["patience"],
+        factor=config.hyperparams["factor"],
+        verbose=True,
+    )
 
-        logger.info("Training the model...")
-        int_subset = int(config.hyperparams["pct_subset"] * len(data["train"]))
+    logger.info("Training the model...")
+    int_subset = int(config.hyperparams["pct_subset"] * len(data["train"]))
 
-        best_loss = np.inf
-        stop_count = 0
-        list_test_loss = []
-        list_train_loss = []
+    best_loss = np.inf
+    stop_count = 0
+    list_test_loss = []
+    list_train_loss = []
+
+    if st_plot:
+        progress_text = "Model Training in progress. Please wait."
+        my_bar_epoch = st.progress(0, text=progress_text)
+
+    for epoch in range(config.hyperparams["epochs"]):
+        total_train_loss = 0.0
+        total_test_loss = 0.0
+        train_timesteps = list(data["train"].keys())[:int_subset]
+        test_timesteps = list(data["test"].keys())
+        random.shuffle(train_timesteps)
 
         if st_plot:
-            progress_text = "Model Training in progress. Please wait."
-            my_bar_epoch = st.progress(0, text=progress_text)
+            pct = int(epoch * 100 / config.hyperparams["epochs"])
+            my_bar_epoch.progress(pct, text=f"Training Epoch {epoch}")
 
-        for epoch in range(config.hyperparams["epochs"]):
-            total_train_loss = 0.0
-            total_test_loss = 0.0
-            train_timesteps = list(data["train"].keys())[:int_subset]
-            test_timesteps = list(data["test"].keys())
-            random.shuffle(train_timesteps)
+            my_bar_inside = st.progress(0, text=progress_text)
+            total_inside = len(train_timesteps)
+            i = 0
 
+        for timestep in tqdm(train_timesteps):
             if st_plot:
-                pct = int(epoch * 100 / config.hyperparams["epochs"])
-                my_bar_epoch.progress(pct, text=f"Training Epoch {epoch}")
+                i += 1
+                pct = int(i * 100 / total_inside)
+                my_bar_inside.progress(pct, text=f"Timesteps {i} for epoch {epoch}")
 
-                my_bar_inside = st.progress(0, text=progress_text)
-                total_inside = len(train_timesteps)
-                i = 0
+            loss, _, _, _ = run_all(
+                data=data,
+                timestep=timestep,
+                train_or_test="train",
+                optimizer=optimizer,
+                lstms=lstm_models,
+                my_gnn=my_gnn,
+                mlp_heads=mlp_heads,
+                use_gnn=config.hyperparams["use_gnn"],
+                device=device,
+            )
 
-            for timestep in tqdm(train_timesteps):
-                if st_plot:
-                    i += 1
-                    pct = int(i * 100 / total_inside)
-                    my_bar_inside.progress(pct, text=f"Timesteps {i} for epoch {epoch}")
+            total_train_loss += loss.item()
 
-                loss, _, _, _ = run_all(
+        avg_train_loss = total_train_loss / len(train_timesteps)
+
+        pred_list = []
+        my_gnn.eval()  # Set the model to evaluation mode
+        with torch.no_grad():
+            for k, timestep in tqdm(enumerate(test_timesteps)):
+                loss, pred, true, comps = run_all(
                     data=data,
                     timestep=timestep,
-                    train_or_test="train",
+                    train_or_test="test",
                     optimizer=optimizer,
                     lstms=lstm_models,
                     my_gnn=my_gnn,
@@ -172,142 +192,120 @@ def run_gnn_model(
                     device=device,
                 )
 
-                total_train_loss += loss.item()
-
-            avg_train_loss = total_train_loss / len(train_timesteps)
-
-            pred_list = []
-            my_gnn.eval()  # Set the model to evaluation mode
-            with torch.no_grad():
-                for k, timestep in tqdm(enumerate(test_timesteps)):
-                    loss, pred, true, comps = run_all(
-                        data=data,
-                        timestep=timestep,
-                        train_or_test="test",
-                        optimizer=optimizer,
-                        lstms=lstm_models,
-                        my_gnn=my_gnn,
-                        mlp_heads=mlp_heads,
-                        use_gnn=config.hyperparams["use_gnn"],
-                        device=device,
-                    )
-
-                    prices = {
-                        **dict(
-                            zip(
-                                [comp + "_pred" for comp in comps],
-                                list(pred.cpu().numpy().squeeze()),
-                            )
-                        ),
-                        **dict(
-                            zip(
-                                [comp + "_true" for comp in comps],
-                                list(true.cpu().numpy().squeeze()),
-                            )
-                        ),
-                    }
-
-                    df_pred = pd.DataFrame(data=prices)
-                    df_pred["last_history_date"] = [dt_index[1][k]] * config.data_prep[
-                        "horizon_forecast"
-                    ]
-
-                    pred_list.append(df_pred)
-
-                    # TODO (VC): Function to plot
-                    if st_plot:
-                        if timestep == config.data_prep["horizon_forecast"]:
-                            # Set the style of matplotlib to 'ggplot' for better aesthetics
-                            plt.style.use("ggplot")
-
-                            fig, axs = plt.subplots(
-                                len(comps), 1, figsize=(10, 5 * len(comps))
-                            )
-
-                            # Loop through each subplot and plot the data
-                            for j, comp in enumerate(comps):
-                                # Setting the background color to transparent
-                                axs[j].set_facecolor("none")
-                                axs[j].plot(
-                                    df_pred.index,
-                                    df_pred[comp + "_pred"],
-                                    label="pred",
-                                    linewidth=2,
-                                )
-                                axs[j].plot(
-                                    df_pred.index,
-                                    df_pred[comp + "_true"],
-                                    label="true",
-                                    linewidth=2,
-                                )
-                                axs[j].set_title(comp)
-                                axs[j].legend()
-
-                                # Making the frame invisible
-                                for spine in axs[j].spines.values():
-                                    spine.set_visible(False)
-
-                                # Reducing the number of ticks and labels for a cleaner look
-                                axs[j].xaxis.set_major_locator(plt.MaxNLocator(5))
-                                axs[j].yaxis.set_major_locator(plt.MaxNLocator(5))
-
-                                # Making the grid lighter and set it to be behind the plots
-                                axs[j].grid(
-                                    True,
-                                    color="gray",
-                                    linestyle="--",
-                                    linewidth=0.5,
-                                    alpha=0.7,
-                                )
-                                axs[j].set_axisbelow(True)
-
-                            # Remove the space between the subplots
-                            plt.tight_layout(pad=2)
-
-                            st.pyplot(fig)
-
-                    total_test_loss += loss.item()
-
-                df_pred = pd.concat(pred_list)
-                avg_test_loss = total_test_loss / len(test_timesteps)
-                if avg_test_loss < best_loss:
-                    stop_count = 0
-                    print("Best Loss! >> ", avg_test_loss)
-                    best_loss = avg_test_loss
-                    torch.save(
-                        lstm_models.state_dict(), MODEL_PATH / rid / "lstm_models.pt"
-                    )
-                    torch.save(my_gnn.state_dict(), MODEL_PATH / rid / "my_gnn.pt")
-                    torch.save(
-                        mlp_heads.state_dict(), MODEL_PATH / rid / "mlp_heads.pt"
-                    )
-
-                else:
-                    stop_count += 1
-                if stop_count == config.hyperparams["patience_stop"]:
-                    logger.info(
-                        f"Stop! {config.hyperparams['patience_stop']} epochs without improving test loss"
-                    )
-                    break
-
-            list_train_loss.append(avg_train_loss)
-            list_test_loss.append(avg_test_loss)
-
-            res_loss = pd.DataFrame(
-                {
-                    "train_loss": list_train_loss,
-                    "test_loss": list_test_loss,
+                prices = {
+                    **dict(
+                        zip(
+                            [comp + "_pred" for comp in comps],
+                            list(pred.cpu().numpy().squeeze()),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            [comp + "_true" for comp in comps],
+                            list(true.cpu().numpy().squeeze()),
+                        )
+                    ),
                 }
-            )
 
-            res_loss.to_csv(MODEL_PATH / rid / "loss.csv", index=False)
+                df_pred = pd.DataFrame(data=prices)
+                df_pred["last_history_date"] = [dt_index[1][k]] * config.data_prep[
+                    "horizon_forecast"
+                ]
 
-            # Update the learning rate
-            scheduler.step(avg_test_loss)
-            print(
+                pred_list.append(df_pred)
+
+                # TODO (VC): Function to plot
+                if st_plot:
+                    if timestep == config.data_prep["horizon_forecast"]:
+                        # Set the style of matplotlib to 'ggplot' for better aesthetics
+                        plt.style.use("ggplot")
+
+                        fig, axs = plt.subplots(
+                            len(comps), 1, figsize=(10, 5 * len(comps))
+                        )
+
+                        # Loop through each subplot and plot the data
+                        for j, comp in enumerate(comps):
+                            # Setting the background color to transparent
+                            axs[j].set_facecolor("none")
+                            axs[j].plot(
+                                df_pred.index,
+                                df_pred[comp + "_pred"],
+                                label="pred",
+                                linewidth=2,
+                            )
+                            axs[j].plot(
+                                df_pred.index,
+                                df_pred[comp + "_true"],
+                                label="true",
+                                linewidth=2,
+                            )
+                            axs[j].set_title(comp)
+                            axs[j].legend()
+
+                            # Making the frame invisible
+                            for spine in axs[j].spines.values():
+                                spine.set_visible(False)
+
+                            # Reducing the number of ticks and labels for a cleaner look
+                            axs[j].xaxis.set_major_locator(plt.MaxNLocator(5))
+                            axs[j].yaxis.set_major_locator(plt.MaxNLocator(5))
+
+                            # Making the grid lighter and set it to be behind the plots
+                            axs[j].grid(
+                                True,
+                                color="gray",
+                                linestyle="--",
+                                linewidth=0.5,
+                                alpha=0.7,
+                            )
+                            axs[j].set_axisbelow(True)
+
+                        # Remove the space between the subplots
+                        plt.tight_layout(pad=2)
+
+                        st.pyplot(fig)
+
+                total_test_loss += loss.item()
+
+            df_pred = pd.concat(pred_list)
+            avg_test_loss = total_test_loss / len(test_timesteps)
+            if avg_test_loss < best_loss:
+                stop_count = 0
+                print("Best Loss! >> ", avg_test_loss)
+                best_loss = avg_test_loss
+                torch.save(
+                    lstm_models.state_dict(), MODEL_PATH / rid / "lstm_models.pt"
+                )
+                torch.save(my_gnn.state_dict(), MODEL_PATH / rid / "my_gnn.pt")
+                torch.save(mlp_heads.state_dict(), MODEL_PATH / rid / "mlp_heads.pt")
+
+            else:
+                stop_count += 1
+            if stop_count == config.hyperparams["patience_stop"]:
+                logger.info(
+                    f"Stop! {config.hyperparams['patience_stop']} epochs without improving test loss"
+                )
+                break
+
+        list_train_loss.append(avg_train_loss)
+        list_test_loss.append(avg_test_loss)
+
+        res_loss = pd.DataFrame(
+            {
+                "train_loss": list_train_loss,
+                "test_loss": list_test_loss,
+            }
+        )
+
+        res_loss.to_csv(MODEL_PATH / rid / "loss.csv", index=False)
+
+        # Update the learning rate
+        scheduler.step(avg_test_loss)
+        print(
+            f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
+        )
+        if st_plot:
+            st.write(
                 f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
             )
-            if st_plot:
-                st.write(
-                    f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
-                )
