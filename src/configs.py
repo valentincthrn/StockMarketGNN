@@ -14,6 +14,11 @@ MACRO_MAPPING = {
     "IPCA": "PRECOS12_IPCAG12",
 }
 
+GROUPS = {
+    "Banks": ["ITUB4.SA", "BBDC4.SA", "BBAS3.SA", "SANB11.SA", "BPAC11.SA"],
+    "Distinct": ["PETR4.SA", "VALE3.SA", "ABEV3.SA", "B3SA3.SA", "JBSS3.SA"],
+}
+
 # # TOP5 BANKS
 # -  # It is the largest private bank in Brazil and has a significant presence in various countries.
 # -  # Another major private-sector bank with a vast network of branches and services across the country.

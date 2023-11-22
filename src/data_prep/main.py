@@ -35,9 +35,15 @@ class DataPrep:
         if not target_stocks is None:
             self.config.ingest["target_stocks"] = target_stocks
         if not macros is None:
-            self.config.ingest["macro_indicators"] = macros
+            if len(macros) == 0:
+                self.config.ingest["macro_indicators"] = None
+            else:
+                self.config.ingest["macro_indicators"] = macros
         if not fund_indicators is None:
-            self.config.ingest["fundamental_indicators"] = fund_indicators
+            if len(fund_indicators) == 0:
+                self.config.ingest["fundamental_indicators"] = None
+            else:
+                self.config.ingest["fundamental_indicators"] = fund_indicators
 
         self.db = db
         self.device = device
@@ -101,7 +107,8 @@ class DataPrep:
         for comp in list(set(multi.get_level_values(0))):
             size = df_merge.loc[:, (comp, slice(None))].shape[1]
             d_size[comp] = size
-            logger.info(f">>> {comp} has {size-1} macro indicators")
+            if not self.config.ingest["fundamental_indicators"] is None:
+                logger.info(f">>> {comp} has {size-1} fundamentals indicators")
 
         df_merge["diff"] = (
             -(df_merge.reset_index()["quote_date"].shift(1) - df_merge.index)
@@ -298,7 +305,8 @@ class DataPrep:
                 data["train"][t] = d_t
                 quote_date_index_train.append(df_prices.index[0])
 
-        st.success("Data Preparation Completed")
+        if st_progress:
+            st.success("Data Preparation Completed")
         return data, quote_date_index_train, quote_date_index_test
 
     def get_future_data(self, st_progress=False):
@@ -378,6 +386,7 @@ class DataPrep:
 
             data_to_pred["train"] = d_t
 
-        st.success("Data Preparation Completed")
+        if st_progress:
+            st.success("Data Preparation Completed")
 
         return data_to_pred, d_size, past_data

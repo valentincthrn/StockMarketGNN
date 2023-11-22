@@ -5,16 +5,16 @@ import matplotlib.pyplot as plt
 from typing import List
 import pandas as pd
 
-
+from src.configs import GROUPS
 from src.utils.db import DBInterface
 from src.streamlit.ingest import extract_current_stocks_data
 from src.data_prep.main import DataPrep
-from src.model.main import run_gnn_model
+
+# from src.model.main import run_gnn_model
 
 
 # Function to display the model building page
 def build_model_page():
-    db = DBInterface()
     st.title("Build New Model")
 
     st.subheader("Modelr Selections")
@@ -47,11 +47,11 @@ def build_model_page():
 
     use_fundamental = False
     if stocks_options == "Banks":
-        stocks_selected = ["ITUB4.SA", "BBDC4.SA", "BBAS3.SA", "SANB11.SA", "BPAC11.SA"]
+        stocks_selected = GROUPS["Banks"]
         use_fundamental = st.checkbox("Use Fundamental")
 
     if stocks_options == "Distincts":
-        stocks_selected = ["PETR4.SA", "VALE3.SA", "ABEV3.SA", "B3SA3.SA", "JBSS3.SA"]
+        stocks_selected = GROUPS["Distincts"]
         use_fundamental = st.checkbox("Use Fundamental")
 
     fund_indicators = None

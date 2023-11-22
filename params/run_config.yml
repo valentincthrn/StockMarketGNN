@@ -10,7 +10,7 @@ ingest:
     - SANB11.SA # The Brazilian unit of the global banking group Santander, it has become one of the main banks in Brazil.
     - BPAC11.SA # It is a leading investment bank in Brazil and has expanded its retail banking operations in recent years.
 
-  macro_indicators:
+  macro_indicators: 
     - Risco-Brasil
     - PIB
     - Dolar
@@ -31,7 +31,7 @@ data_prep:
   horizon_forecast: 90
   test_days: 360
   start: 100
-  step_every: 200
+  step_every: 100
 
 hyperparams:
   out_lstm_size: 50

@@ -13,9 +13,9 @@ from src.model.module import CompanyExtractor, MyGNN, MLPWithHiddenLayer
 def initialize_models(
     config: Union[Path, RunConfiguration], device: str, d_size: dict, macro_size: int
 ):
-    if config is Path:
+    if isinstance(config, Path):
         config = RunConfiguration.from_yaml(config)
-    elif config is RunConfiguration:
+    elif isinstance(config, RunConfiguration):
         pass
     else:
         raise ValueError("config must be a Path or a RunConfiguration object")
