@@ -146,9 +146,9 @@ def stock_predictions(
     data_prep = DataPrep(
         config=config,
         db=DBInterface(),
-        target_stocks=target_stocks,
-        fund_indicators=fund,
-        macros=macro,
+        # target_stocks=target_stocks,
+        # fund_indicators=fund,
+        # macros=macro,
         device=device,
     )
     data, d_size, quote_date_index_train, quote_date_index_test = data_prep.get_data()

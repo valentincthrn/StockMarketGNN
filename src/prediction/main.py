@@ -74,7 +74,7 @@ def prepare_data_for_prediction(
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     data_prep = DataPrep(
-        config_path=Path(config_path),
+        config=Path(config_path),
         db=DBInterface(),
         target_stocks=config.ingest["target_stocks"],
         fund_indicators=config.ingest["fundamental_indicators"],

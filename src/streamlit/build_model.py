@@ -2,6 +2,7 @@ import streamlit as st
 from pathlib import Path
 import torch
 
+from src.configs import RunConfiguration
 from src.configs import GROUPS
 from src.utils.db import DBInterface
 from src.streamlit.ingest import extract_current_stocks_data
@@ -74,12 +75,16 @@ def build_model_page():
     if submit_button:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
+        # Define config file
+        config = RunConfiguration.from_yaml(Path("params/run_config.yml"))
+
+        config.ingest["target_stocks"] = stocks_selected
+        config.ingest["macro_indicators"] = macros
+        config.ingest["fundamental_indicators"] = fund_indicators
+
         data_prep = DataPrep(
-            config_path=Path("params/run_config.yml"),
+            config=config,
             db=DBInterface(),
-            target_stocks=stocks_selected,
-            fund_indicators=fund_indicators,
-            macros=macros,
             device=device,
             overwrite_params=overwrite_params,
         )

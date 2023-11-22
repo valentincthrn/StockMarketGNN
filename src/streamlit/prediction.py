@@ -56,6 +56,7 @@ def prediction_page():
             run_config_path = Path(f"models/{subfolder_name}/run_config.yml")
 
             data, d_size, past_data = prepare_data_for_prediction(run_config_path)
+            st.info(f"Features Size For Each Company: {d_size}")
 
             if len(data["macro"]) == 0:
                 macro_size = 0
@@ -63,7 +64,7 @@ def prediction_page():
                 macro_size = data["macro"].shape[0]
 
             models_trio_init = initialize_models(
-                run_config_path, subfolder_name, device, d_size, macro_size
+                run_config_path, device, d_size, macro_size
             )
 
             model_trio = initialize_weights(models_trio_init, subfolder_name)

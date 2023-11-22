@@ -8,10 +8,16 @@ def plot_training_pred(df_pred: pd.DataFrame, comps: List):
     # Set the style of matplotlib to 'ggplot' for better aesthetics
     plt.style.use("ggplot")
 
-    fig, axs = plt.subplots(len(comps), 1, figsize=(10, 5 * len(comps)))
+    # Adjusting for a single subplot or multiple subplots
+    if len(comps) == 1:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        axs = [ax]  # Wrapping it in a list for consistency in indexing
+    else:
+        fig, axs = plt.subplots(len(comps), 1, figsize=(10, 5 * len(comps)))
 
     # Loop through each subplot and plot the data
     for j, comp in enumerate(comps):
+        st.write(j, comp)
         # Setting the background color to transparent
         axs[j].set_facecolor("none")
         axs[j].plot(
@@ -50,4 +56,4 @@ def plot_training_pred(df_pred: pd.DataFrame, comps: List):
     # Remove the space between the subplots
     plt.tight_layout(pad=2)
 
-    st.pyplot(fig)
+    return fig

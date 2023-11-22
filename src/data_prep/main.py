@@ -21,16 +21,17 @@ class DataPrep:
 
     def __init__(
         self,
-        config: RunConfiguration,
+        config: Union[RunConfiguration, Path],
         db: DBInterface,
-        target_stocks: Union[List[str], None] = None,
-        fund_indicators: Union[List, None] = None,
-        macros: Union[List, None] = None,
         device: str = "cuda",
         overwrite_params: dict = None,
     ) -> None:
-        # Define config file
-        self.config = config
+        if isinstance(config, Path):
+            self.config = RunConfiguration.from_yaml(config)
+        elif isinstance(config, RunConfiguration):
+            self.config = config
+        else:
+            raise ValueError("config must be a Path or a RunConfiguration object")
         self.db = db
         self.device = device
 

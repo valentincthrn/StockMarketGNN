@@ -9,7 +9,6 @@ from tqdm import tqdm
 import os
 import streamlit as st
 
-
 from src.configs import RunConfiguration
 from src.model.utils import run_all
 from src.utils.logs import log_errors
@@ -134,8 +133,6 @@ def run_gnn_model(
 
         pred_list = []
         my_gnn.eval()  # Set the model to evaluation mode
-        st.write(test_timesteps)
-        logger.info(test_timesteps)
         with torch.no_grad():
             for k, timestep in tqdm(enumerate(test_timesteps)):
                 loss, pred, true, comps = run_all(
@@ -149,81 +146,74 @@ def run_gnn_model(
                     use_gnn=config.hyperparams["use_gnn"],
                     device=device,
                 )
-                logger.info(timestep)
-                logger.info(comps)
-                logger.info(loss)
-                logger.info(pred)
+
+                pred_list = pred.cpu().numpy()
+                true_list = true.cpu().numpy()
+                if len(comps) > 1:
+                    pred_list = pred_list.squeeze()
+                    true_list = true_list.squeeze()
 
                 prices = {
                     **dict(
                         zip(
                             [comp + "_pred" for comp in comps],
-                            list(pred.cpu().numpy().squeeze()),
+                            pred_list,
                         )
                     ),
                     **dict(
                         zip(
                             [comp + "_true" for comp in comps],
-                            list(true.cpu().numpy().squeeze()),
+                            true_list,
                         )
                     ),
                 }
 
-                st.write(prices)
-
                 df_pred = pd.DataFrame(data=prices)
-
-                st.write(df_pred)
-                df_pred["last_history_date"] = [dt_index[1][k]] * config.data_prep[
-                    "horizon_forecast"
-                ]
-
-                st.dataframe(df_pred)
-
-                pred_list.append(df_pred)
 
                 if timestep == config.data_prep["horizon_forecast"]:
                     if st_plot:
-                        plot_training_pred(df_pred, comps)
+                        fig = plot_training_pred(df_pred, comps)
+                        st.pyplot(fig)
 
                 total_test_loss += loss.item()
 
-        df_pred = pd.concat(pred_list)
-        avg_test_loss = total_test_loss / len(test_timesteps)
-        if avg_test_loss < best_loss:
-            stop_count = 0
-            print("Best Loss! >> ", avg_test_loss)
-            best_loss = avg_test_loss
-            torch.save(lstm_models.state_dict(), MODEL_PATH / rid / "lstm_models.pt")
-            torch.save(my_gnn.state_dict(), MODEL_PATH / rid / "my_gnn.pt")
-            torch.save(mlp_heads.state_dict(), MODEL_PATH / rid / "mlp_heads.pt")
+            avg_test_loss = total_test_loss / len(test_timesteps)
+            if avg_test_loss < best_loss:
+                stop_count = 0
+                print("Best Loss! >> ", avg_test_loss)
+                best_loss = avg_test_loss
+                torch.save(
+                    lstm_models.state_dict(), MODEL_PATH / rid / "lstm_models.pt"
+                )
+                torch.save(my_gnn.state_dict(), MODEL_PATH / rid / "my_gnn.pt")
+                torch.save(mlp_heads.state_dict(), MODEL_PATH / rid / "mlp_heads.pt")
 
-        else:
-            stop_count += 1
-        if stop_count == config.hyperparams["patience_stop"]:
-            logger.info(
-                f"Stop! {config.hyperparams['patience_stop']} epochs without improving test loss"
+            else:
+                stop_count += 1
+            if stop_count == config.hyperparams["patience_stop"]:
+                logger.info(
+                    f"Stop! {config.hyperparams['patience_stop']} epochs without improving test loss"
+                )
+                break
+
+            list_train_loss.append(avg_train_loss)
+            list_test_loss.append(avg_test_loss)
+
+            res_loss = pd.DataFrame(
+                {
+                    "train_loss": list_train_loss,
+                    "test_loss": list_test_loss,
+                }
             )
-            break
 
-        list_train_loss.append(avg_train_loss)
-        list_test_loss.append(avg_test_loss)
+            res_loss.to_csv(MODEL_PATH / rid / "loss.csv", index=False)
 
-        res_loss = pd.DataFrame(
-            {
-                "train_loss": list_train_loss,
-                "test_loss": list_test_loss,
-            }
-        )
-
-        res_loss.to_csv(MODEL_PATH / rid / "loss.csv", index=False)
-
-        # Update the learning rate
-        scheduler.step(avg_test_loss)
-        print(
-            f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
-        )
-        if st_plot:
-            st.write(
+            # Update the learning rate
+            scheduler.step(avg_test_loss)
+            print(
                 f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
             )
+            if st_plot:
+                st.write(
+                    f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
+                )
