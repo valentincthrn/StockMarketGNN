@@ -118,6 +118,10 @@ The primary objective of this project is to conduct an exploratory analysis of t
   
 By addressing these questions, the project aims to shed light on the efficacy of GNNs in financial modeling and provide insights into the significance of sector-specific correlations and external economic factors in stock prediction algorithms.
 
+### Model
+
+![Alt text for image]([path/to/image.png](https://github.com/valentincthrn/StockMarketGNN/blob/main/images/model.png))
+
 ### Results
 
 WIP
