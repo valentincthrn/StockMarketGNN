@@ -146,6 +146,6 @@ WIP
 
 ### Contact
 
-As this project is part of a research project, I may not be working on it in the future. For any questions and doubts, you can contact me on valentincthrn@gmail.com
+This project constitutes a component of a broader research initiative. While my direct involvement may conclude with the research phase, I welcome any inquiries or clarifications regarding the project. Should you have any questions or require further information, please do not hesitate to reach out to me at valentincthrn@gmail.com.
 
 ---
