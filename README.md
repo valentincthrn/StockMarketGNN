@@ -1,6 +1,6 @@
 # StockMarketGNN
 
-This project, in the context of the research thesis at the University of São Paulo, aims to explore the use of Graph Neural Networks for predicting the stock market. Especially, Graph Attention Networks (GATs) were implemented in different groups of Brazilian stocks that are all linked. This project is responsible for the whole pipeline from the ingestion of the data in the SQLite database to the predictions for future timesteps. 
+This initiative represents a research endeavor undertaken as part of a thesis at the University of São Paulo, with the objective of examining the potential of Graph Neural Networks (GNNs) in forecasting stock market prices. The research specifically focuses on the implementation of Graph Attention Networks (GATs) across various clusters of interconnected Brazilian stocks. This comprehensive project encompasses the whole pipeline of the analytical process, ranging from the initial data ingestion into an SQLite database to the execution of predictive modeling for subsequent time intervals.
 
 ## Setup
 
@@ -111,27 +111,19 @@ The `stock_predictions` function configures and initiates the entire pipeline, i
 
 ## Project Explanation
 
-Detailed explanation of your project, including its purpose, how it works, and any other relevant information.
+The primary objective of this project is to conduct an exploratory analysis of the application of Graph Neural Networks (GNNs) in stock prediction. Recent endeavors in this domain suggest that GNNs may possess the capability to encapsulate the intricate dynamics of stock market movements. Consequently, this project is designed to investigate the following critical inquiries:
 
-### Features
+- Do GNNs exhibit enhanced learning capabilities when the input graph is constructed from stocks within the same sector?
+- To what extent do fundamental and macroeconomic indicators contribute to the improvement of predictive outcomes in this context of GNNs?
+  
+By addressing these questions, the project aims to shed light on the efficacy of GNNs in financial modeling and provide insights into the significance of sector-specific correlations and external economic factors in stock prediction algorithms.
 
-- Feature 1
-- Feature 2
-- [...]
-- Feature N
+### Results
 
-### Contributing
-
-Instructions for how others can contribute to the project.
-
-### License
-
-Specify the license under which your project is released.
+WIP
 
 ### Contact
 
-Your contact information or additional resources.
+As this project is part of a research project, I may not be working on it in the future. For any questions and doubts, you can contact me on valentincthrn@gmail.com
 
 ---
-
-[Include any additional sections or notes as required.]
