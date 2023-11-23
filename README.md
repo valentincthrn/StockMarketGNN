@@ -1,6 +1,6 @@
 # StockMarketGNN
 
-Brief description of your project.
+This project, in the context of the research thesis at the University of São Paulo, aims to explore the use of Graph Neural Networks for predicting the stock market. Especially, Graph Attention Networks (GATs) were implemented in different groups of Brazilian stocks that are all linked. This project is responsible for the whole pipeline from the ingestion of the data in the SQLite database to the predictions for future timesteps. 
 
 ## Setup
 
@@ -8,7 +8,7 @@ This section will guide you through the initial setup of the project.
 
 ### Prerequisites
 
-- Git
+- 'git clone 
 - Docker
 
 ### Installation
