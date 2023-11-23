@@ -2,14 +2,13 @@
 ingest:
   # List of stocks to ingest
   target_stocks:
-
-  # # TOP5 BANKS
-    - ITUB4.SA # It is the largest private bank in Brazil and has a significant presence in various countries.
-    - BBDC4.SA # Another major private-sector bank with a vast network of branches and services across the country.
-    - BBAS3.SA # It is the largest public bank in Brazil and has a strong presence both domestically and internationally.
-    - SANB11.SA # The Brazilian unit of the global banking group Santander, it has become one of the main banks in Brazil.
-    - BPAC11.SA # It is a leading investment bank in Brazil and has expanded its retail banking operations in recent years.
-
+    # - BAZA3.SA
+    # - BEES3.SA
+    # - BMEB4.SA
+    # - BBAS3.SA
+    # - BMIN4.SA
+    - BGIP4.SA
+    - ABCB4.SA
   macro_indicators: 
     - Risco-Brasil
     - PIB
@@ -30,8 +29,8 @@ data_prep:
   min_points_history: 5
   horizon_forecast: 90
   test_days: 360
-  start: 100
-  step_every: 100
+  start: 60
+  step_every: 200
 
 hyperparams:
   out_lstm_size: 50
