@@ -1,6 +1,6 @@
 import torch
 
-from torch_geometric.nn import GATConv
+from torch_geometric.nn import GATv2Conv
 import torch.nn.functional as F
 
 
@@ -17,13 +17,15 @@ class CompanyExtractor(torch.nn.Module):
 
 
 class MLPWithHiddenLayer(torch.nn.Module):
-    def __init__(self, input_size, output_size, device):
+    def __init__(self, input_size, output_size, dropout, device):
         super(MLPWithHiddenLayer, self).__init__()
 
+        self.dropout = torch.nn.Dropout(p = dropout)
         self.hidden = torch.nn.Linear(input_size, input_size).to(device)
         self.output = torch.nn.Linear(input_size, output_size).to(device)
 
     def forward(self, x):
+        x = self.dropout(x)
         x = torch.nn.functional.relu(self.hidden(x))
         return self.output(x)
 
@@ -33,10 +35,18 @@ class MyGNN(torch.nn.Module):
         self,
         in_channels,
         out_channels,
+        dropout,
+        heads,
+        concat,
         device,
     ):
         super(MyGNN, self).__init__()
-        self.gat_conv = GATConv(in_channels=in_channels, out_channels=out_channels).to(
+        self.gat_conv = GATv2Conv(in_channels=in_channels,
+                                  out_channels=out_channels, 
+                                  dropout=dropout, 
+                                  heads=heads,
+                                  concat = concat
+                                  ).to(
             device
         )
         self.device = device
