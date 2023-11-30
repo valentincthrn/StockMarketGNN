@@ -24,26 +24,30 @@ ingest:
     - CAGR LUCROS 5 ANOS
 
 data_prep:
-  pe_t: 30
-  history: 730
+  pe_t: 10
+  history: 120
   min_points_history: 5
-  horizon_forecast: 90
+  horizon_forecast: 14
   test_days: 360
   start: 60
-  step_every: 200
+  step_every: 1
 
 hyperparams:
   out_lstm_size: 50
   out_gnn_size: 50
-  criterion: "MSE"
+  criterion: "IoA" # "MAPE" "IoA"
   optimizer: "Adam"
   lr: 0.01
   scheduler: "ReduceLROnPlateau"
-  patience: 50
-  patience_stop: 400
-  factor: 0.8
-  epochs: 2000
+  patience: 15
+  patience_stop: 100
+  factor: 0.9
+  epochs: 1000
   pct_subset: 1
+  dropout_gnn: 0.2
+  heads: 8
+  concat: False #True Not implemented
+  dropout_mlp: 0 
   use_gnn: True
 
   
