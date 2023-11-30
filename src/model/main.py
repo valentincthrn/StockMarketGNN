@@ -108,7 +108,11 @@ def run_gnn_model(
             my_bar_inside = st.progress(0, text=progress_text)
             total_inside = len(train_timesteps)
             i = 0
-
+            
+            
+        lstm_models.train()
+        mlp_heads.train()
+        my_gnn.train()
         for timestep in tqdm(train_timesteps):
             if st_plot:
                 i += 1
@@ -120,6 +124,7 @@ def run_gnn_model(
                 timestep=timestep,
                 train_or_test="train",
                 optimizer=optimizer,
+                criterion=config.hyperparams["criterion"],
                 lstms=lstm_models,
                 my_gnn=my_gnn,
                 mlp_heads=mlp_heads,
@@ -132,6 +137,8 @@ def run_gnn_model(
         avg_train_loss = total_train_loss / len(train_timesteps)
 
         pred_list = []
+        lstm_models.eval()
+        mlp_heads.eval()
         my_gnn.eval()  # Set the model to evaluation mode
         with torch.no_grad():
             for k, timestep in tqdm(enumerate(test_timesteps)):
@@ -140,6 +147,7 @@ def run_gnn_model(
                     timestep=timestep,
                     train_or_test="test",
                     optimizer=optimizer,
+                    criterion=config.hyperparams["criterion"],
                     lstms=lstm_models,
                     my_gnn=my_gnn,
                     mlp_heads=mlp_heads,
