@@ -14,6 +14,27 @@ def mape_loss(x, y):
     loss = torch.abs(100 * (x - y) / (y + epsilon))
     return torch.mean(loss)
 
+def index_agreement_torch(s: torch.Tensor, o: torch.Tensor) -> torch.Tensor:
+    """
+    Index of Agreement
+    Willmott (1981, 1982)
+
+    This function is adapted for batch processing, where each column represents a different company.
+
+    Args:
+        s: Simulated or predicted values (e.g., stock prices), shape [90, 5] where 90 is days and 5 is companies.
+        o: Observed or true values, shape [90, 5].
+
+    Returns:
+        ia: Index of Agreement averaged over all companies.
+    """
+    o_mean = torch.mean(o, dim=1, keepdim=True)
+    numerator = torch.sum((o - s) ** 2, dim=1)
+    denominator = torch.sum((torch.abs(s - o_mean) + torch.abs(o - o_mean)) ** 2, dim=1)
+    ia = 1 - numerator / denominator
+
+    return - ia.mean() + 1
+
 
 def calculate_mape(true_values, pred_values):
     # Avoid division by zero

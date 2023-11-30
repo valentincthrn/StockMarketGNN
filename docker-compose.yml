@@ -2,9 +2,9 @@ version: '3.8'
 services:
   myservice:
     build: .
-    # runtime: nvidia  # This line is crucial
-    # environment:
-    #   - NVIDIA_VISIBLE_DEVICES=all  # This line ensures that all NVIDIA devices are visible inside the container
+    runtime: nvidia  # This line is crucial
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all  # This line ensures that all NVIDIA devices are visible inside the container
     volumes:
       - .:/workspace
     working_dir: /workspace

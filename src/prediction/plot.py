@@ -11,7 +11,7 @@ def plot_stock_predictions(historical_prices, predictions_tensor, timestamp_limi
     }
 
     # Ensure the predictions tensor is converted to a numpy array for processing
-    predictions = predictions_tensor.detach().numpy()
+    predictions = predictions_tensor.detach().cpu().numpy()
 
     # Plotting each company's data and prediction
     for i, (ticker, df) in enumerate(historical_df.items()):

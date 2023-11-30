@@ -1,6 +1,6 @@
 import torch
 
-from src.utils.common import mape_loss
+from src.utils.common import mape_loss, index_agreement_torch
 
 
 def run_all(
@@ -8,6 +8,7 @@ def run_all(
     timestep: int,
     train_or_test: str,
     optimizer,
+    criterion: str,
     lstms,
     my_gnn,
     mlp_heads,
@@ -35,9 +36,11 @@ def run_all(
     pred, true = run_mlp_heads_separatly(
         mlp_heads, features_encoded, comps, pred_t, macro, device
     )
-
     # Compute the loss
-    loss = mape_loss(pred, true)
+    if criterion == "MAPE":
+        loss = mape_loss(pred, true)
+    elif criterion == "IoA":
+        loss = index_agreement_torch(pred, true)
 
     if train_or_test == "train":
         # Backward pass and optimization

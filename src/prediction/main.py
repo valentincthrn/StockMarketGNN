@@ -1,7 +1,6 @@
 from pathlib import Path
 import torch
 from torch.nn import ModuleDict
-import streamlit as st
 from typing import Union
 
 from src.configs import RunConfiguration
@@ -41,6 +40,7 @@ def initialize_models(
             comp: MLPWithHiddenLayer(
                 in_channels_mlp + macro_size,
                 config.data_prep["horizon_forecast"],
+                config.hyperparams["dropout_mlp"],
                 device,
             )
             for comp in d_size.keys()
@@ -50,6 +50,9 @@ def initialize_models(
     my_gnn = MyGNN(
         in_channels=config.hyperparams["out_lstm_size"],
         out_channels=config.hyperparams["out_gnn_size"],
+        dropout = config.hyperparams["dropout_gnn"],
+        heads = config.hyperparams["heads"],
+        concat = config.hyperparams["concat"],
         device=device,
     )
 
