@@ -101,7 +101,7 @@ def prediction_page():
                 to_pred=True,
             )
 
-            plot_stock_predictions(past_data, pred, 400, comps, last_raw_price, df_prices_raw_all)
+            plot_stock_predictions(past_data, pred, 400, comps, last_raw_price, df_prices_raw_all, subfolder_name)
 
 
 def extract_model_info(models_dir):
@@ -112,11 +112,11 @@ def extract_model_info(models_dir):
         pt_files = glob.glob(f"{d}/*.pt")
         yml_files = glob.glob(f"{d}/*.yml")
         csv_files = glob.glob(f"{d}/*.csv")
-        if len(pt_files) == 3 and len(yml_files) == 1 and len(csv_files) == 1:
+        if len(pt_files) == 3 and len(yml_files) == 1 and len(csv_files) >= 1:
             valid_dirs.append(d)
 
     # Step 2: Extract information from each directory
-    model_info = []
+    total_info = []
     for d in valid_dirs:
         training_date, model_name = os.path.basename(d).split("_")
 
@@ -125,25 +125,47 @@ def extract_model_info(models_dir):
             config = yaml.safe_load(yml_file)
             stocks = config["ingest"].get("target_stocks", [])
             use_gnn = config["hyperparams"].get("use_gnn")
+            use_fundamental = config["ingest"].get("fundamental_indicators", [])
+            if use_fundamental is None:
+                use_fundamental = False
+            elif len(use_fundamental) == 0:
+                use_fundamental = False
+            else:
+                use_fundamental = True
+            use_macro = config["ingest"].get("macro_indicators", [])
+            if use_macro is None:
+                use_macro = False
+            elif len(use_macro) == 0:
+                use_macro = False
+            else:
+                use_macro = True
 
         # Read CSV file for best loss
-        csv_file = pd.read_csv(glob.glob(f"{d}/*.csv")[0])
-        best_loss = csv_file["test_loss"].min()
+        csv_file = pd.read_csv(glob.glob(f"{d}/loss.csv")[0])
+        best_ioa_loss = csv_file["test_loss"].min()
+        comps = [c for c in csv_file.columns if "mape" in c]
+        mape_info = {}
+        for comp in comps:
+            mape_info[comp] = csv_file.loc[lambda f: f["test_loss"] == best_ioa_loss, comp].values[0]
 
         # Append to list
-        model_info.append(
-            {
+        model_info = {
                 "id": training_date,
                 "model_name": model_name,
                 "training_date": training_date,
                 "stocks": stocks,
                 "use_gnn": use_gnn,
-                "best_loss": best_loss,
+                "use_fundamental": use_fundamental,
+                "use_macro": use_macro,
+                "best_ioa_loss": best_ioa_loss,
             }
-        )
+        
+        model_info.update(mape_info)
+        
+        total_info.append(model_info)
 
     # Step 3: Create DataFrame
-    df = pd.DataFrame(model_info)
+    df = pd.DataFrame(total_info)
 
     df["training_date"] = pd.to_datetime(df["training_date"])
     df["training_date"] = df["training_date"].dt.strftime("%d-%b-%y")

@@ -47,7 +47,6 @@ def run_all(
     if train_or_test == "train":
         # Backward pass and optimization
         loss.backward()
-        torch.nn.utils.clip_grad_value_(params, 1.0)
         optimizer.step()
 
     return loss, pred, true, comps

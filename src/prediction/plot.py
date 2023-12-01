@@ -1,16 +1,13 @@
 import matplotlib.pyplot as plt
-import torch
 import pandas as pd
 import streamlit as st
 from uniplot import plot
-import numpy as np
+from io import BytesIO
 from pandas.tseries.offsets import BDay
-
-from src.utils.common import calculate_mape
-
+from pathlib import Path
 
 def plot_stock_predictions(
-    historical_prices, predictions_tensor, timestamp_limit, comps, last_raw_price, df_prices_raw
+    historical_prices, predictions_tensor, timestamp_limit, comps, last_raw_price, df_prices_raw, subfolder_name
 ):
 
     historical_df = pd.concat(historical_prices.values(), axis=1)
@@ -45,7 +42,27 @@ def plot_stock_predictions(
     snapshot = max(historical_df.index)
     df_prices_raw.columns = [c[0]+ "_true" for c in df_prices_raw.columns]
     df_prices_raw = df_prices_raw.loc[lambda f: f.index >= snapshot]
+    snapshot_str = snapshot.strftime("%Y-%m-%d")
+    
+    # Check if df_prices_raw has more than one row for merging
+    if len(df_prices_raw) > 1:
+        df = df_hist_with_pred.merge(df_prices_raw, left_index=True, right_index=True, how="left")
+    else:
+        df = df_hist_with_pred.copy()
 
+    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+
+    # Generate the CSV file in memory
+    csv = df.to_csv().encode('utf-8')
+    csv_bytesIO = BytesIO(csv)
+
+    # The actual download button
+    st.download_button(
+        label="Download data as CSV",
+        data=csv_bytesIO,
+        file_name=f"pred_and_history_{snapshot_str}.csv",
+        mime='text/csv',
+    )
     # Plotting each company's data and prediction
     for ticker in df_hist_with_pred.columns:
         fig, ax = plt.subplots()
