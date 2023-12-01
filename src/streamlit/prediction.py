@@ -56,7 +56,7 @@ def prediction_page():
 
             run_config_path = Path(f"models/{subfolder_name}/run_config.yml")
 
-            data, d_size, past_data, comps = prepare_data_for_prediction(
+            data, d_size, past_data, comps, df_prices_raw_all = prepare_data_for_prediction(
                 run_config_path, snapshot=snapshot
             )
             st.info(f"Features Size For Each Company: {d_size}")
@@ -101,7 +101,7 @@ def prediction_page():
                 to_pred=True,
             )
 
-            plot_stock_predictions(past_data, pred, 400, comps, last_raw_price)
+            plot_stock_predictions(past_data, pred, 400, comps, last_raw_price, df_prices_raw_all)
 
 
 def extract_model_info(models_dir):

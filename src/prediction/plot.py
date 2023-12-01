@@ -10,7 +10,7 @@ from src.utils.common import calculate_mape
 
 
 def plot_stock_predictions(
-    historical_prices, predictions_tensor, timestamp_limit, comps, last_raw_price
+    historical_prices, predictions_tensor, timestamp_limit, comps, last_raw_price, df_prices_raw
 ):
 
     historical_df = pd.concat(historical_prices.values(), axis=1)
@@ -41,6 +41,10 @@ def plot_stock_predictions(
     df_hist_with_pred.iloc[-horizon - 1 :] = (
         df_hist_with_pred.iloc[-horizon - 1 :].cumprod(axis=0).values
     )
+    
+    snapshot = max(historical_df.index)
+    df_prices_raw.columns = [c[0]+ "_true" for c in df_prices_raw.columns]
+    df_prices_raw = df_prices_raw.loc[lambda f: f.index >= snapshot]
 
     # Plotting each company's data and prediction
     for ticker in df_hist_with_pred.columns:
@@ -52,11 +56,14 @@ def plot_stock_predictions(
         #     st.dataframe(ts)
         history = ts.loc[lambda f: f.index <= historical_df.index[0]]
         horizon = ts.loc[lambda f: f.index >= historical_df.index[0]]
+        if len(df_prices_raw) > 1:
+            horizon_true = df_prices_raw[[ticker+"_true"]]
+            ax.plot(horizon_true, label="Futures Prices", linewidth=2, color="b", linestyle='dotted')
 
         # Plot historical prices
-        ax.plot(history, label="Historical Prices", linewidth=2)
+        ax.plot(history, label="Historical Prices", linewidth=2, color="b")
 
-        ax.plot(horizon, label="Predictions", linewidth=2)
+        ax.plot(horizon, label="Predictions", linewidth=2, color = "r", linestyle='dashed')
 
         # Set background to transparent
         ax.set_facecolor("none")

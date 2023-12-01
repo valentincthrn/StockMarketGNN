@@ -405,4 +405,4 @@ class DataPrep:
         if st_progress:
             st.success("Data Preparation Completed")
 
-        return data_to_pred, d_size, past_data, companies
+        return data_to_pred, d_size, past_data, companies, df_prices_with_fund

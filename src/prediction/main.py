@@ -82,8 +82,8 @@ def prepare_data_for_prediction(
         overwrite_params=None,
     )
 
-    data_to_pred, d_size, past_data, comps = data_prep.get_future_data(
+    data_to_pred, d_size, past_data, comps, df_prices_raw_all = data_prep.get_future_data(
         st_progress=True, snapshot=snapshot
     )
 
-    return data_to_pred, d_size, past_data, comps
+    return data_to_pred, d_size, past_data, comps, df_prices_raw_all
