@@ -26,11 +26,11 @@ ingest:
 data_prep:
   pe_t: 10
   history: 120
-  min_points_history: 5
+  min_points_history: 1
   horizon_forecast: 14
   test_days: 360
   start: 60
-  step_every: 1
+  step_every: 100
 
 hyperparams:
   out_lstm_size: 50
@@ -44,10 +44,9 @@ hyperparams:
   factor: 0.9
   epochs: 1000
   pct_subset: 1
-  dropout_gnn: 0.2
+  dropout_gnn: 0
   heads: 8
   concat: False #True Not implemented
-  dropout_mlp: 0 
-  use_gnn: True
+  use_gnn: False
 
   

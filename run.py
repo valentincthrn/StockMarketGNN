@@ -151,14 +151,14 @@ def stock_predictions(
         # macros=macro,
         device=device,
     )
-    data, means_stds, d_size, quote_date_index_train, quote_date_index_test = data_prep.get_data()
+    data, means_stds, df_prices_raw, d_size, quote_date_index_train, quote_date_index_test = data_prep.get_data()
     print("Features Size for Each Company", d_size)
 
     # get the data
     run_gnn_model(
         data=data,
         d_size=d_size,
-        dt_index=(quote_date_index_train, quote_date_index_test),
+        df_prices_raw=df_prices_raw,
         means_stds = means_stds,
         config=data_prep.config,
         exp_name=exp_name,
