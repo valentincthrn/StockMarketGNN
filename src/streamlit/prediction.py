@@ -54,10 +54,8 @@ def prediction_page():
             )
 
             run_config_path = Path(f"models/{subfolder_name}/run_config.yml")
-            norms_config = Path(f"models/{subfolder_name}/normalization_config.pkl")
-            norms = load_pickle(pkl_path = norms_config)
 
-            data, d_size, past_data = prepare_data_for_prediction(run_config_path)
+            data, d_size, past_data, comps = prepare_data_for_prediction(run_config_path)
             st.info(f"Features Size For Each Company: {d_size}")
 
             if len(data["macro"]) == 0:
@@ -75,8 +73,7 @@ def prediction_page():
             pred_t = None
             macro = data["macro"]
             if len(macro) == 0:
-                macro = None
-            
+                macro = None            
 
             # PHASE 1: LSTM EXTRACTION
             features_extracted, comps = run_lstm_separatly(
@@ -100,7 +97,7 @@ def prediction_page():
                 to_pred=True,
             )
 
-            plot_stock_predictions(past_data, pred, 400, norms)
+            plot_stock_predictions(past_data, pred, 400, comps)
 
 
 def extract_model_info(models_dir):

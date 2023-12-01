@@ -4,39 +4,46 @@ import pandas as pd
 import streamlit as st
 from uniplot import plot
 import numpy as np
+from pandas.tseries.offsets import BDay
 
 
-def plot_stock_predictions(historical_prices, predictions_tensor, timestamp_limit, norms):
-    historical_df = {
-        ticker: pd.DataFrame(data).head(timestamp_limit)
-        for ticker, data in historical_prices.items()
-    }
+
+def plot_stock_predictions(historical_prices, predictions_tensor, timestamp_limit, comps):
     
+    historical_df = pd.concat(historical_prices.values(), axis=1)
+    historical_df.columns = [c[0] for c in historical_df.columns]
+
     # Ensure the predictions tensor is converted to a numpy array for processing
     predictions = predictions_tensor.detach().cpu().numpy()
+    df_predictions = pd.DataFrame(dict(zip(comps, predictions)))
     
+    # Compute the next N business days from the last date of the existing index
+    horizon = len(df_predictions)
+    next_business_days = pd.date_range(start=historical_df.index[0] + BDay(1), periods=horizon, freq=BDay())
+    df_predictions.index = next_business_days
     
+    df_hist_with_pred = pd.concat([df_predictions, historical_df], axis=0).sort_index()
+    #st.dataframe(df_hist_with_pred)
+    #st.dataframe(df_hist_with_pred.iloc[-horizon:, :])
+    df_hist_with_pred.iloc[-horizon:, :] = (df_hist_with_pred.iloc[-horizon:, :] + 1).values
+    #st.dataframe(df_hist_with_pred)
+    df_hist_with_pred.iloc[-horizon-1:] = df_hist_with_pred.iloc[-horizon-1:].cumprod(axis=0).values
+    
+    #st.dataframe(df_hist_with_pred)    
     
     # Plotting each company's data and prediction
-    for i, (ticker, df) in enumerate(historical_df.items()):
+    for ticker in df_hist_with_pred.columns:
         fig, ax = plt.subplots()
         ax.set_title(f"Stock Price and Predictions for {ticker}")
         
-        history = df[(ticker, "price")].values[:, np.newaxis]
-        last_history_price = history[0][:, np.newaxis]
-        last_history_price = (last_history_price - norms[ticker][0])/norms[ticker][1]
-        pred_comp = list(np.concatenate((last_history_price, predictions[i][:, np.newaxis])).squeeze())
-        pred_comp_add = [pred_comp[0]] + [pred_comp[i] + pred_comp[i-1] for i in range(1, len(pred_comp))]   
-        
+        ts = df_hist_with_pred[[ticker]]
+        history = ts.loc[lambda f: f.index <= historical_df.index[0]]
+        horizon = ts.loc[lambda f: f.index >= historical_df.index[0]]
+    
         # Plot historical prices
-        ax.plot(df.index, history, label="Historical Prices", linewidth=2)
+        ax.plot(history, label="Historical Prices", linewidth=2)
 
-        # Plot predictions
-        predicted_prices = [c*norms[ticker][1] + norms[ticker][0] for c in pred_comp_add]
-        prediction_dates = pd.date_range(
-            start=df.index[1], periods=len(predicted_prices) + 1, closed="right"
-        )
-        ax.plot(prediction_dates, predicted_prices, label="Predictions", linewidth=2)
+        ax.plot(horizon, label="Predictions", linewidth=2)
 
         # Set background to transparent
         ax.set_facecolor("none")
@@ -66,12 +73,11 @@ def plot_stock_predictions(historical_prices, predictions_tensor, timestamp_limi
         st.pyplot(fig)
 
 
-def plot_uniplot(df_pred, comps, means_stds):
+def plot_uniplot(df_pred_prices, comps):
         
     for comp in comps:
-        df_to_plot = df_pred[[comp + "_pred", comp + "_true"]]
-        df_to_plot = (df_to_plot + df_to_plot.shift(1)).fillna(df_to_plot)
+        df_to_plot = df_pred_prices[[comp + "_pred", comp + "_true"]]
         plot(
-            df_to_plot.values.T*means_stds[comp][1] + means_stds[comp][0],
+            df_to_plot.values.T,
             lines = True,
             title=f"{comp} Predictions vs True")

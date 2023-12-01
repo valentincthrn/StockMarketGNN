@@ -55,11 +55,11 @@ class DataPrep:
             df_macro = self._extract_macro()
 
         logger.info("Creating Data Dictionnary")
-        data, means_stds, df_prices_raw, quote_date_index_train, quote_date_index_test = self._run_extraction(
+        data, means_stds, quote_date_index_train, quote_date_index_test = self._run_extraction(
             df_prices_with_fund, df_macro, st_progress
         )
 
-        return data, means_stds, df_prices_raw, d_size, quote_date_index_train, quote_date_index_test
+        return data, means_stds, d_size, quote_date_index_train, quote_date_index_test
 
     def _extract_prices_and_fund(self):
         logger.info(">> Extracting Prices")
@@ -195,7 +195,7 @@ class DataPrep:
         pe = PositionalEncoding(hyperparam["pe_t"])
         N = df_prices_with_fund.shape[0]
 
-        data = {"train": {}, "test": {}, "pred": {}, "macro": {}}
+        data = {"train": {}, "test": {}, "pred": {}, "macro": {}, "last_raw_price": {}}
 
         quote_date_index_train = []
         quote_date_index_test = []
@@ -233,9 +233,10 @@ class DataPrep:
                 pct = min(int(loop * 100 / tot_loop), 100)
                 my_bar.progress(pct, text=progress_text)
             # extract prices history, futures and companies name
-            df_prices, y, companies = add_time_component(
+            df_prices, y, last_prices, companies = add_time_component(
                 df=df_prices_norm,
                 time=t,
+                df_raw_prices = df_prices_with_fund,
                 history=hyperparam["history"],
                 horizon=hyperparam["horizon_forecast"],
                 min_points=hyperparam["min_points_history"],
@@ -248,6 +249,8 @@ class DataPrep:
                 print("NaN Detected In Target")
 
             data["pred"][t] = dict(zip(companies, y))
+            
+            data["last_raw_price"][t] = dict(zip(companies, last_prices))
 
             if not df_macro.empty:
                 macro_features = torch.tensor(
@@ -303,7 +306,7 @@ class DataPrep:
 
         if st_progress:
             st.success("Data Preparation Completed")
-        return data, means_stds, df_prices_with_fund, quote_date_index_train, quote_date_index_test
+        return data, means_stds, quote_date_index_train, quote_date_index_test
 
     def get_future_data(self, st_progress=False):
         return self._extract_future_data(st_progress=st_progress)
@@ -385,4 +388,4 @@ class DataPrep:
         if st_progress:
             st.success("Data Preparation Completed")
 
-        return data_to_pred, d_size, past_data
+        return data_to_pred, d_size, past_data, companies

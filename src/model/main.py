@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 def run_gnn_model(
     data: pd.DataFrame,
     d_size: dict,
-    df_prices_raw: pd.DataFrame,
     means_stds: dict,
     exp_name: str,
     device: str,
@@ -122,7 +121,7 @@ def run_gnn_model(
                 pct = int(i * 100 / total_inside)
                 my_bar_inside.progress(pct, text=f"Timesteps {i} for epoch {epoch}")
 
-            loss, _, _, _, _ = run_all(
+            loss, _, _, _ = run_all(
                 data=data,
                 timestep=timestep,
                 train_or_test="train",
@@ -145,8 +144,7 @@ def run_gnn_model(
         my_gnn.eval()  # Set the model to evaluation mode
         with torch.no_grad():
             for k, timestep in tqdm(enumerate(test_timesteps)):
-                print(df_prices_raw.iloc[config.data_prep["horizon_forecast"]:timestep+config.data_prep["horizon_forecast"]])
-                loss, pred, true, comps, last_price_t = run_all(
+                loss, pred, true, comps = run_all(
                     data=data,
                     timestep=timestep,
                     train_or_test="test",
@@ -159,17 +157,14 @@ def run_gnn_model(
                     device=device,
                 )
                 
-                s = {}
-                for comp in comps:
-                    s[comp] = last_price_t[comp]*means_stds[comp][1] + means_stds[comp][0]
-                
                 pred_list = pred.cpu().numpy()
                 true_list = true.cpu().numpy()
                 if len(comps) > 1:
                     pred_list = pred_list.squeeze()
                     true_list = true_list.squeeze()
                     
-                last_price_t_list = np.array([last_price_t[comp] for comp in comps])[:, np.newaxis]
+                last_price_t_list = np.array([data["last_raw_price"][timestep][comp] for comp in comps])[:, np.newaxis]
+                
                 
                 prices = {
                     **dict(
@@ -187,21 +182,15 @@ def run_gnn_model(
                 }
 
                 df_pred = pd.DataFrame(data=prices)
-                print(timestep)
-                print(df_pred)
-                df_pred = (df_pred + df_pred.shift(1)).fillna(df_pred)
-                print(df_pred)
-                for comp in comps:
-                    df_pred[comp + "_pred"] = df_pred[comp + "_pred"]*means_stds[comp][1] + means_stds[comp][0]
-                    df_pred[comp + "_true"] = df_pred[comp + "_true"]*means_stds[comp][1] + means_stds[comp][0]
-                print(df_pred)
-                raise
-                    
+                
+                df_pred.iloc[1:, :] = (df_pred.iloc[1:, :] + 1)
+                df_pred_prices = df_pred.cumprod(axis=0)
+     
                 if k == 0:
                     if st_plot:
-                        fig = plot_training_pred(df_pred, comps, means_stds)
+                        fig = plot_training_pred(df_pred_prices, comps)
                         st.pyplot(fig)
-                    plot_uniplot(df_pred, comps, means_stds)
+                    plot_uniplot(df_pred_prices, comps)
 
                 total_test_loss += loss.item()
 

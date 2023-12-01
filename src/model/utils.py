@@ -19,26 +19,10 @@ def run_all(
     data_t = data[train_or_test][timestep]
     pred_t = data["pred"][timestep]
     macro = data["macro"].get(timestep)
-    last_price_t = {}
-    
-    alpha = {'bbas3': (13.057552864930729, 10.056229206745936), 
-     'bbdc4': (11.385638369535515, 5.048931235885364), 
-     'bpac11': (13.20967258630377, 8.45625017355266), 
-     'itub4': (11.946573350579929, 8.696379047401782), 
-     'sanb11': (17.4118036129833, 10.542997766290975)}
-    
-    # Get last available price
-    for comp, tensor in data_t.items():
-        last_norm_price = tensor.detach().cpu().numpy()[0, 0]
-        last_price_t[comp] = last_norm_price
-        print(comp, timestep)
-        print(last_norm_price*alpha[comp][1] + alpha[comp][0])  
 
     if train_or_test == "train":
         optimizer.zero_grad()
         
-
-
     # PHASE 1: LSTM EXTRACTION
     features_extracted, comps = run_lstm_separatly(lstms, data_t, device)
 
@@ -63,7 +47,7 @@ def run_all(
         loss.backward()
         optimizer.step()
 
-    return loss, pred, true, comps, last_price_t
+    return loss, pred, true, comps
 
 
 def run_lstm_separatly(

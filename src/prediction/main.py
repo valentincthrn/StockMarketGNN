@@ -81,6 +81,6 @@ def prepare_data_for_prediction(
         overwrite_params=None,
     )
 
-    data_to_pred, d_size, past_data = data_prep.get_future_data(st_progress=True)
+    data_to_pred, d_size, past_data, comps = data_prep.get_future_data(st_progress=True)
 
-    return data_to_pred, d_size, past_data
+    return data_to_pred, d_size, past_data, comps
