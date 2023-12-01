@@ -151,7 +151,7 @@ def stock_predictions(
         # macros=macro,
         device=device,
     )
-    data, d_size, quote_date_index_train, quote_date_index_test = data_prep.get_data()
+    data, means_stds, d_size, quote_date_index_train, quote_date_index_test = data_prep.get_data()
     print("Features Size for Each Company", d_size)
 
     # get the data
@@ -159,6 +159,7 @@ def stock_predictions(
         data=data,
         d_size=d_size,
         dt_index=(quote_date_index_train, quote_date_index_test),
+        means_stds = means_stds,
         config=data_prep.config,
         exp_name=exp_name,
         device=device,

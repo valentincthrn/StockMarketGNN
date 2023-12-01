@@ -2,14 +2,15 @@ import matplotlib.pyplot as plt
 import torch
 import pandas as pd
 import streamlit as st
+from uniplot import plot
 
 
-def plot_stock_predictions(historical_prices, predictions_tensor, timestamp_limit):
+def plot_stock_predictions(historical_prices, predictions_tensor, timestamp_limit, norms):
     historical_df = {
         ticker: pd.DataFrame(data).head(timestamp_limit)
         for ticker, data in historical_prices.items()
     }
-
+    
     # Ensure the predictions tensor is converted to a numpy array for processing
     predictions = predictions_tensor.detach().cpu().numpy()
 
@@ -19,7 +20,7 @@ def plot_stock_predictions(historical_prices, predictions_tensor, timestamp_limi
         ax.set_title(f"Stock Price and Predictions for {ticker}")
 
         # Plot historical prices
-        ax.plot(df.index, df[(ticker, "price")], label="Historical Prices", linewidth=2)
+        ax.plot(df.index, df[(ticker, "price")]*norms[ticker][1] + norms[ticker][0], label="Historical Prices", linewidth=2)
 
         # Plot predictions
         predicted_prices = predictions[i]
@@ -54,3 +55,15 @@ def plot_stock_predictions(historical_prices, predictions_tensor, timestamp_limi
 
         # Render the plot in Streamlit
         st.pyplot(fig)
+
+
+def plot_uniplot(df_pred, comps, means_stds):
+    
+    print(means_stds)
+    
+    
+    for comp in comps:
+        plot(
+            df_pred[[comp + "_pred", comp + "_true"]].values.T*means_stds[comp][1] + means_stds[comp][0],
+            lines = True,
+            title=f"{comp} Predictions vs True")

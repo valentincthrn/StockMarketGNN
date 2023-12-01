@@ -40,7 +40,6 @@ def initialize_models(
             comp: MLPWithHiddenLayer(
                 in_channels_mlp + macro_size,
                 config.data_prep["horizon_forecast"],
-                config.hyperparams["dropout_mlp"],
                 device,
             )
             for comp in d_size.keys()
@@ -73,7 +72,6 @@ def initialize_weights(trio_model, subfolder_name):
 def prepare_data_for_prediction(
     config_path: Path,
 ):
-    config = RunConfiguration.from_yaml(config_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     data_prep = DataPrep(

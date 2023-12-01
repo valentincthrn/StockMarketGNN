@@ -1,5 +1,6 @@
 import pandas as pd
-
+from pathlib import Path
+from typing import Dict
 
 def add_time_component(
     df: pd.DataFrame,
@@ -82,3 +83,20 @@ def get_pred_data_with_time_comp(
     df_order = df_range.assign(order=lambda x: x["diff"].cumsum())
 
     return df_order, companies
+
+
+def normalize_and_save(df: pd.DataFrame, test_days: int):
+        
+    # Extract the second level of columns which contain 'price'
+    price_cols = [col for col in df.columns if 'price' in col[1]]
+    means_stds = {}
+    
+    # Standardize each 'price' column
+    for col in price_cols:
+        mean = df.iloc[test_days:][col].mean()
+        std = df.iloc[test_days:][col].std()
+        df[col] = (df[col] - mean) / std
+        means_stds[col[0]] = (mean, std)
+        
+    return df, means_stds
+

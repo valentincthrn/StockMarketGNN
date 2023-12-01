@@ -13,8 +13,9 @@ from src.configs import RunConfiguration
 from src.model.utils import run_all
 from src.utils.logs import log_errors
 from src.streamlit.utils import plot_training_pred
-from src.utils.common import save_yaml_config
+from src.utils.common import save_yaml_config, save_pickle
 from src.prediction.main import initialize_models
+from src.prediction.plot import plot_uniplot
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ def run_gnn_model(
     data: pd.DataFrame,
     d_size: dict,
     dt_index: tuple,
+    means_stds: dict,
     exp_name: str,
     device: str,
     config: RunConfiguration,
@@ -52,6 +54,7 @@ def run_gnn_model(
     os.mkdir(MODEL_PATH / rid)
 
     save_yaml_config(config=config, MODEL_PATH_RID=MODEL_PATH / rid)
+    save_pickle(dictio=means_stds, MODEL_PATH_RID=MODEL_PATH / rid, file_name="normalization_config.json")
 
     logger.info("Initialize models, elements...")
 
@@ -180,8 +183,9 @@ def run_gnn_model(
 
                 if timestep == config.data_prep["horizon_forecast"]:
                     if st_plot:
-                        fig = plot_training_pred(df_pred, comps)
+                        fig = plot_training_pred(df_pred, comps, means_stds)
                         st.pyplot(fig)
+                    plot_uniplot(df_pred, comps, means_stds)
 
                 total_test_loss += loss.item()
 

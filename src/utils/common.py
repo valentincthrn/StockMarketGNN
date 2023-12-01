@@ -3,6 +3,7 @@ import torch
 from pathlib import Path
 import dataclasses
 import yaml
+import pickle as pkl
 
 
 from src.configs import RunConfiguration
@@ -42,14 +43,25 @@ def calculate_mape(true_values, pred_values):
     return 100 * (abs((true_values - pred_values) / true_values)[mask].mean())
 
 
-def save_yaml_config(config: RunConfiguration, MODEL_PATH_RID: Path):
+def save_yaml_config(config: RunConfiguration, MODEL_PATH_RID: Path, file_name: str = "run_config.yml"):
     # Write the config file as yaml
     config_dict = dataclasses.asdict(config)
     yaml_str = yaml.dump(config_dict)
 
     # Write the YAML string to a file
-    with open(MODEL_PATH_RID / "run_config.yml", "w") as file:
+    with open(MODEL_PATH_RID / file_name, "w") as file:
         file.write(yaml_str)
+        
+def save_pickle(dictio, MODEL_PATH_RID: Path, file_name: str = "normalization_config.pkl"):
+
+    with open(MODEL_PATH_RID / file_name, "wb") as file:
+        pkl.dump(dictio, file)
+        
+def load_pickle(pkl_path: Path):
+
+    with open(pkl_path, "rb") as file:
+        dictio = pkl.load(file)
+    return dictio
 
 
 class PositionalEncoding(torch.nn.Module):

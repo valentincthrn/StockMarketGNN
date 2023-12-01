@@ -4,7 +4,7 @@ from typing import List
 import streamlit as st
 
 
-def plot_training_pred(df_pred: pd.DataFrame, comps: List):
+def plot_training_pred(df_pred: pd.DataFrame, comps: List, means_stds: dict):
     # Set the style of matplotlib to 'ggplot' for better aesthetics
     plt.style.use("ggplot")
 
@@ -21,13 +21,13 @@ def plot_training_pred(df_pred: pd.DataFrame, comps: List):
         axs[j].set_facecolor("none")
         axs[j].plot(
             df_pred.index,
-            df_pred[comp + "_pred"],
+            df_pred[comp + "_pred"]*means_stds[comp][1] + means_stds[comp][0],
             label="pred",
             linewidth=2,
         )
         axs[j].plot(
             df_pred.index,
-            df_pred[comp + "_true"],
+            df_pred[comp + "_true"]*means_stds[comp][1] + means_stds[comp][0],
             label="true",
             linewidth=2,
         )

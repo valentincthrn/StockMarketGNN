@@ -12,7 +12,7 @@ from src.prediction.main import (
     initialize_weights,
 )
 from src.prediction.plot import plot_stock_predictions
-
+from src.utils.common import load_pickle
 from src.model.utils import run_lstm_separatly, run_mlp_heads_separatly
 
 
@@ -54,6 +54,8 @@ def prediction_page():
             )
 
             run_config_path = Path(f"models/{subfolder_name}/run_config.yml")
+            norms_config = Path(f"models/{subfolder_name}/normalization_config.pkl")
+            norms = load_pickle(pkl_path = norms_config)
 
             data, d_size, past_data = prepare_data_for_prediction(run_config_path)
             st.info(f"Features Size For Each Company: {d_size}")
@@ -98,7 +100,7 @@ def prediction_page():
                 to_pred=True,
             )
 
-            plot_stock_predictions(past_data, pred, 400)
+            plot_stock_predictions(past_data, pred, 400, norms)
 
 
 def extract_model_info(models_dir):

@@ -100,6 +100,7 @@ def build_model_page():
         (
             data,
             d_size,
+            means_stds,
             quote_date_index_train,
             quote_date_index_test,
         ) = data_prep.get_data(st_progress=True)
@@ -110,6 +111,7 @@ def build_model_page():
             data=data,
             d_size=d_size,
             dt_index=(quote_date_index_train, quote_date_index_test),
+            means_stds = means_stds,
             exp_name=query,
             device=device,
             config=data_prep.config,
