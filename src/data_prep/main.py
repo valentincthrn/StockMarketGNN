@@ -10,7 +10,7 @@ from typing import List, Union
 
 from src.utils.db import DBInterface
 from src.configs import RunConfiguration
-from src.data_prep.utils import add_time_component, get_pred_data_with_time_comp, normalize_and_save
+from src.data_prep.utils import add_time_component, get_pred_data_with_time_comp, normalize_and_diff
 from src.utils.common import PositionalEncoding
 
 logger = logging.getLogger(__name__)
@@ -55,11 +55,11 @@ class DataPrep:
             df_macro = self._extract_macro()
 
         logger.info("Creating Data Dictionnary")
-        data, means_stds, quote_date_index_train, quote_date_index_test = self._run_extraction(
+        data, means_stds, df_prices_raw, quote_date_index_train, quote_date_index_test = self._run_extraction(
             df_prices_with_fund, df_macro, st_progress
         )
 
-        return data, means_stds, d_size, quote_date_index_train, quote_date_index_test
+        return data, means_stds, df_prices_raw, d_size, quote_date_index_train, quote_date_index_test
 
     def _extract_prices_and_fund(self):
         logger.info(">> Extracting Prices")
@@ -222,8 +222,7 @@ class DataPrep:
             self.config.data_prep["step_every"],
         )
         
-        # TODO
-        df_prices_with_fund, means_stds = normalize_and_save(df_prices_with_fund, hyperparam["test_days"])
+        df_prices_norm, means_stds = normalize_and_diff(df_prices_with_fund, hyperparam["test_days"])
 
         # Combine the two ranges
         combined_range = list(range_part1) + list(range_part2)
@@ -235,7 +234,7 @@ class DataPrep:
                 my_bar.progress(pct, text=progress_text)
             # extract prices history, futures and companies name
             df_prices, y, companies = add_time_component(
-                df=df_prices_with_fund,
+                df=df_prices_norm,
                 time=t,
                 history=hyperparam["history"],
                 horizon=hyperparam["horizon_forecast"],
@@ -304,7 +303,7 @@ class DataPrep:
 
         if st_progress:
             st.success("Data Preparation Completed")
-        return data, means_stds, quote_date_index_train, quote_date_index_test
+        return data, means_stds, df_prices_with_fund, quote_date_index_train, quote_date_index_test
 
     def get_future_data(self, st_progress=False):
         return self._extract_future_data(st_progress=st_progress)

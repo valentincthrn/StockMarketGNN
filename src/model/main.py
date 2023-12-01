@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 def run_gnn_model(
     data: pd.DataFrame,
     d_size: dict,
-    dt_index: tuple,
+    df_prices_raw: pd.DataFrame,
     means_stds: dict,
     exp_name: str,
     device: str,
@@ -54,7 +54,7 @@ def run_gnn_model(
     os.mkdir(MODEL_PATH / rid)
 
     save_yaml_config(config=config, MODEL_PATH_RID=MODEL_PATH / rid)
-    save_pickle(dictio=means_stds, MODEL_PATH_RID=MODEL_PATH / rid, file_name="normalization_config.json")
+    save_pickle(dictio=means_stds, MODEL_PATH_RID=MODEL_PATH / rid, file_name="normalization_config.pkl")
 
     logger.info("Initialize models, elements...")
 
@@ -122,7 +122,7 @@ def run_gnn_model(
                 pct = int(i * 100 / total_inside)
                 my_bar_inside.progress(pct, text=f"Timesteps {i} for epoch {epoch}")
 
-            loss, _, _, _ = run_all(
+            loss, _, _, _, _ = run_all(
                 data=data,
                 timestep=timestep,
                 train_or_test="train",
@@ -145,7 +145,8 @@ def run_gnn_model(
         my_gnn.eval()  # Set the model to evaluation mode
         with torch.no_grad():
             for k, timestep in tqdm(enumerate(test_timesteps)):
-                loss, pred, true, comps = run_all(
+                print(df_prices_raw.iloc[config.data_prep["horizon_forecast"]:timestep+config.data_prep["horizon_forecast"]])
+                loss, pred, true, comps, last_price_t = run_all(
                     data=data,
                     timestep=timestep,
                     train_or_test="test",
@@ -157,31 +158,46 @@ def run_gnn_model(
                     use_gnn=config.hyperparams["use_gnn"],
                     device=device,
                 )
-
+                
+                s = {}
+                for comp in comps:
+                    s[comp] = last_price_t[comp]*means_stds[comp][1] + means_stds[comp][0]
+                
                 pred_list = pred.cpu().numpy()
                 true_list = true.cpu().numpy()
                 if len(comps) > 1:
                     pred_list = pred_list.squeeze()
                     true_list = true_list.squeeze()
-
+                    
+                last_price_t_list = np.array([last_price_t[comp] for comp in comps])[:, np.newaxis]
+                
                 prices = {
                     **dict(
                         zip(
                             [comp + "_pred" for comp in comps],
-                            pred_list,
+                            np.concatenate((last_price_t_list, pred_list), axis=1),
                         )
                     ),
                     **dict(
                         zip(
                             [comp + "_true" for comp in comps],
-                            true_list,
+                            np.concatenate((last_price_t_list, true_list), axis=1),
                         )
                     ),
                 }
 
                 df_pred = pd.DataFrame(data=prices)
-
-                if timestep == config.data_prep["horizon_forecast"]:
+                print(timestep)
+                print(df_pred)
+                df_pred = (df_pred + df_pred.shift(1)).fillna(df_pred)
+                print(df_pred)
+                for comp in comps:
+                    df_pred[comp + "_pred"] = df_pred[comp + "_pred"]*means_stds[comp][1] + means_stds[comp][0]
+                    df_pred[comp + "_true"] = df_pred[comp + "_true"]*means_stds[comp][1] + means_stds[comp][0]
+                print(df_pred)
+                raise
+                    
+                if k == 0:
                     if st_plot:
                         fig = plot_training_pred(df_pred, comps, means_stds)
                         st.pyplot(fig)

@@ -85,8 +85,9 @@ def get_pred_data_with_time_comp(
     return df_order, companies
 
 
-def normalize_and_save(df: pd.DataFrame, test_days: int):
+def normalize_and_diff(df_prices_raw: pd.DataFrame, test_days: int):
         
+    df = df_prices_raw.copy()
     # Extract the second level of columns which contain 'price'
     price_cols = [col for col in df.columns if 'price' in col[1]]
     means_stds = {}
@@ -96,6 +97,7 @@ def normalize_and_save(df: pd.DataFrame, test_days: int):
         mean = df.iloc[test_days:][col].mean()
         std = df.iloc[test_days:][col].std()
         df[col] = (df[col] - mean) / std
+        df[col] = df[col] - df[col].shift(-1)
         means_stds[col[0]] = (mean, std)
         
     return df, means_stds
