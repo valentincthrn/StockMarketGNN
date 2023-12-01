@@ -111,7 +111,7 @@ def build_model_page():
             data=data,
             d_size=d_size,
             dt_index=(quote_date_index_train, quote_date_index_test),
-            means_stds = means_stds,
+            means_stds=means_stds,
             exp_name=query,
             device=device,
             config=data_prep.config,

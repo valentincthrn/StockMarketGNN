@@ -8,12 +8,13 @@ import random
 from tqdm import tqdm
 import os
 import streamlit as st
+from collections import defaultdict
 
 from src.configs import RunConfiguration
 from src.model.utils import run_all
 from src.utils.logs import log_errors
 from src.streamlit.utils import plot_training_pred
-from src.utils.common import save_yaml_config, save_pickle
+from src.utils.common import save_yaml_config, save_pickle, calculate_mape
 from src.prediction.main import initialize_models
 from src.prediction.plot import plot_uniplot
 
@@ -53,7 +54,11 @@ def run_gnn_model(
     os.mkdir(MODEL_PATH / rid)
 
     save_yaml_config(config=config, MODEL_PATH_RID=MODEL_PATH / rid)
-    save_pickle(dictio=means_stds, MODEL_PATH_RID=MODEL_PATH / rid, file_name="normalization_config.pkl")
+    save_pickle(
+        dictio=means_stds,
+        MODEL_PATH_RID=MODEL_PATH / rid,
+        file_name="normalization_config.pkl",
+    )
 
     logger.info("Initialize models, elements...")
 
@@ -70,8 +75,10 @@ def run_gnn_model(
         list_gnn = list(my_gnn.parameters())
     else:
         list_gnn = []
+
+    params = list(lstm_models.parameters()) + list_gnn + list(mlp_heads.parameters())
     optimizer = Adam(
-        list(lstm_models.parameters()) + list_gnn + list(mlp_heads.parameters()),
+        params,
         lr=config.hyperparams["lr"],
     )
 
@@ -89,8 +96,6 @@ def run_gnn_model(
 
     best_loss = np.inf
     stop_count = 0
-    list_test_loss = []
-    list_train_loss = []
 
     if st_plot:
         progress_text = "Model Training in progress. Please wait."
@@ -110,8 +115,7 @@ def run_gnn_model(
             my_bar_inside = st.progress(0, text=progress_text)
             total_inside = len(train_timesteps)
             i = 0
-            
-            
+
         lstm_models.train()
         mlp_heads.train()
         my_gnn.train()
@@ -126,6 +130,7 @@ def run_gnn_model(
                 timestep=timestep,
                 train_or_test="train",
                 optimizer=optimizer,
+                params=params,
                 criterion=config.hyperparams["criterion"],
                 lstms=lstm_models,
                 my_gnn=my_gnn,
@@ -139,6 +144,7 @@ def run_gnn_model(
         avg_train_loss = total_train_loss / len(train_timesteps)
 
         pred_list = []
+        mape_per_comp = defaultdict(list)
         lstm_models.eval()
         mlp_heads.eval()
         my_gnn.eval()  # Set the model to evaluation mode
@@ -149,6 +155,7 @@ def run_gnn_model(
                     timestep=timestep,
                     train_or_test="test",
                     optimizer=optimizer,
+                    params=params,
                     criterion=config.hyperparams["criterion"],
                     lstms=lstm_models,
                     my_gnn=my_gnn,
@@ -156,16 +163,17 @@ def run_gnn_model(
                     use_gnn=config.hyperparams["use_gnn"],
                     device=device,
                 )
-                
+
                 pred_list = pred.cpu().numpy()
                 true_list = true.cpu().numpy()
                 if len(comps) > 1:
                     pred_list = pred_list.squeeze()
                     true_list = true_list.squeeze()
-                    
-                last_price_t_list = np.array([data["last_raw_price"][timestep][comp] for comp in comps])[:, np.newaxis]
-                
-                
+
+                last_price_t_list = np.array(
+                    [data["last_raw_price"][timestep][comp] for comp in comps]
+                )[:, np.newaxis]
+
                 prices = {
                     **dict(
                         zip(
@@ -182,10 +190,16 @@ def run_gnn_model(
                 }
 
                 df_pred = pd.DataFrame(data=prices)
-                
-                df_pred.iloc[1:, :] = (df_pred.iloc[1:, :] + 1)
+
+                df_pred.iloc[1:, :] = df_pred.iloc[1:, :] + 1
                 df_pred_prices = df_pred.cumprod(axis=0)
-     
+                for comp in comps:
+                    mape_comp = calculate_mape(
+                        true_values=df_pred_prices[comp + "_true"].values,
+                        pred_values=df_pred_prices[comp + "_pred"].values,
+                    )
+                    mape_per_comp["mape_" + comp].append(mape_comp)
+
                 if k == 0:
                     if st_plot:
                         fig = plot_training_pred(df_pred_prices, comps)
@@ -195,6 +209,12 @@ def run_gnn_model(
                 total_test_loss += loss.item()
 
             avg_test_loss = total_test_loss / len(test_timesteps)
+
+            res_mape_metric = {}
+            for comp in comps:
+                res_mape_metric["mape_" + comp] = np.mean(mape_per_comp["mape_" + comp])
+            avg_mape_test_loss = np.mean(list(res_mape_metric.values()))
+
             if avg_test_loss < best_loss:
                 stop_count = 0
                 print("Best Loss! >> ", avg_test_loss)
@@ -213,24 +233,31 @@ def run_gnn_model(
                 )
                 break
 
-            list_train_loss.append(avg_train_loss)
-            list_test_loss.append(avg_test_loss)
+            to_save = {
+                "train_loss": avg_train_loss,
+                "test_loss": avg_test_loss,
+            }
+            to_save.update(res_mape_metric)
+            if Path(MODEL_PATH / rid / "loss.csv").exists():
+                res_loss = pd.read_csv(MODEL_PATH / rid / "loss.csv")
 
-            res_loss = pd.DataFrame(
-                {
-                    "train_loss": list_train_loss,
-                    "test_loss": list_test_loss,
-                }
-            )
+                res_loss_new = pd.concat(
+                    [res_loss, pd.DataFrame(to_save, index=[0])], ignore_index=True
+                )
 
-            res_loss.to_csv(MODEL_PATH / rid / "loss.csv", index=False)
+                res_loss_new.to_csv(MODEL_PATH / rid / "loss.csv", index=False)
+
+            else:
+
+                res_loss = pd.DataFrame(to_save, index=[0])
+                res_loss.to_csv(MODEL_PATH / rid / "loss.csv", index=False)
 
             # Update the learning rate
             scheduler.step(avg_test_loss)
             print(
-                f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
+                f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}, Mape Loss: {avg_mape_test_loss:.4f}"
             )
             if st_plot:
                 st.write(
-                    f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}"
+                    f"Epoch [{epoch+1}/{config.hyperparams['epochs']}], Train Loss: {avg_train_loss:.4f}, Test Loss: {avg_test_loss:.4f}, Mape Loss: {avg_mape_test_loss:.4f}"
                 )

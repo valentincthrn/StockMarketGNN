@@ -49,9 +49,9 @@ def initialize_models(
     my_gnn = MyGNN(
         in_channels=config.hyperparams["out_lstm_size"],
         out_channels=config.hyperparams["out_gnn_size"],
-        dropout = config.hyperparams["dropout_gnn"],
-        heads = config.hyperparams["heads"],
-        concat = config.hyperparams["concat"],
+        dropout=config.hyperparams["dropout_gnn"],
+        heads=config.hyperparams["heads"],
+        concat=config.hyperparams["concat"],
         device=device,
     )
 
@@ -71,6 +71,7 @@ def initialize_weights(trio_model, subfolder_name):
 
 def prepare_data_for_prediction(
     config_path: Path,
+    snapshot,
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -81,6 +82,8 @@ def prepare_data_for_prediction(
         overwrite_params=None,
     )
 
-    data_to_pred, d_size, past_data, comps = data_prep.get_future_data(st_progress=True)
+    data_to_pred, d_size, past_data, comps = data_prep.get_future_data(
+        st_progress=True, snapshot=snapshot
+    )
 
     return data_to_pred, d_size, past_data, comps

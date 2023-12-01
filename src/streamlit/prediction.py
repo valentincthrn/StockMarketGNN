@@ -32,6 +32,7 @@ def prediction_page():
     )
     with st.form("model_res"):
         query = st.multiselect("Please select model ids to run", df_model_str["select"])
+        snapshot = pd.to_datetime(st.date_input("Snapshot"))
         submit_button = st.form_submit_button("Run the predictions")
 
     models_to_test = df_model_str.loc[
@@ -55,7 +56,9 @@ def prediction_page():
 
             run_config_path = Path(f"models/{subfolder_name}/run_config.yml")
 
-            data, d_size, past_data, comps = prepare_data_for_prediction(run_config_path)
+            data, d_size, past_data, comps = prepare_data_for_prediction(
+                run_config_path, snapshot=snapshot
+            )
             st.info(f"Features Size For Each Company: {d_size}")
 
             if len(data["macro"]) == 0:
@@ -72,8 +75,9 @@ def prediction_page():
             data_t = data["train"]
             pred_t = None
             macro = data["macro"]
+            last_raw_price = data["last_raw_price"]
             if len(macro) == 0:
-                macro = None            
+                macro = None
 
             # PHASE 1: LSTM EXTRACTION
             features_extracted, comps = run_lstm_separatly(
@@ -97,7 +101,7 @@ def prediction_page():
                 to_pred=True,
             )
 
-            plot_stock_predictions(past_data, pred, 400, comps)
+            plot_stock_predictions(past_data, pred, 400, comps, last_raw_price)
 
 
 def extract_model_info(models_dir):

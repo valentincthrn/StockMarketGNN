@@ -15,6 +15,7 @@ def mape_loss(x, y):
     loss = torch.abs(100 * (x - y) / (y + epsilon))
     return torch.mean(loss)
 
+
 def index_agreement_torch(s: torch.Tensor, o: torch.Tensor) -> torch.Tensor:
     """
     Index of Agreement
@@ -34,7 +35,7 @@ def index_agreement_torch(s: torch.Tensor, o: torch.Tensor) -> torch.Tensor:
     denominator = torch.sum((torch.abs(s - o_mean) + torch.abs(o - o_mean)) ** 2, dim=1)
     ia = 1 - numerator / denominator
 
-    return - ia.mean() + 1
+    return -ia.mean() + 1
 
 
 def calculate_mape(true_values, pred_values):
@@ -43,7 +44,9 @@ def calculate_mape(true_values, pred_values):
     return 100 * (abs((true_values - pred_values) / true_values)[mask].mean())
 
 
-def save_yaml_config(config: RunConfiguration, MODEL_PATH_RID: Path, file_name: str = "run_config.yml"):
+def save_yaml_config(
+    config: RunConfiguration, MODEL_PATH_RID: Path, file_name: str = "run_config.yml"
+):
     # Write the config file as yaml
     config_dict = dataclasses.asdict(config)
     yaml_str = yaml.dump(config_dict)
@@ -51,12 +54,16 @@ def save_yaml_config(config: RunConfiguration, MODEL_PATH_RID: Path, file_name: 
     # Write the YAML string to a file
     with open(MODEL_PATH_RID / file_name, "w") as file:
         file.write(yaml_str)
-        
-def save_pickle(dictio, MODEL_PATH_RID: Path, file_name: str = "normalization_config.pkl"):
+
+
+def save_pickle(
+    dictio, MODEL_PATH_RID: Path, file_name: str = "normalization_config.pkl"
+):
 
     with open(MODEL_PATH_RID / file_name, "wb") as file:
         pkl.dump(dictio, file)
-        
+
+
 def load_pickle(pkl_path: Path):
 
     with open(pkl_path, "rb") as file:

@@ -2,6 +2,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict
 
+
 def add_time_component(
     df: pd.DataFrame,
     time: int,
@@ -45,13 +46,8 @@ def add_time_component(
         .round(8)
         .T.values.tolist()
     )
-    
-    last_price = (
-        df_raw_prices_keep.iloc[time]
-        [companies]
-        .values
-        .tolist()
-    )
+
+    last_price = df_raw_prices_keep.iloc[time][companies].values.tolist()
 
     # cumulated the time component
     df_range.iloc[:horizon, -1] = 0
@@ -63,6 +59,7 @@ def add_time_component(
 def get_pred_data_with_time_comp(
     df: pd.DataFrame,
     history: int,
+    snapshot,
 ) -> pd.DataFrame:
     """Based on the price database,
     add the time component positional encoding
@@ -70,6 +67,8 @@ def get_pred_data_with_time_comp(
     :param df: the dataframe in the window
     :type df: pd.DataFrame
     """
+    if snapshot is not None:
+        df = df.loc[lambda f: f.index <= snapshot]
 
     df_range = df.iloc[:history]
 
@@ -83,20 +82,19 @@ def get_pred_data_with_time_comp(
     return df_order, companies
 
 
-def normalize_and_diff(df_prices_raw: pd.DataFrame, test_days: int):
-        
+def normalize_and_diff(df_prices_raw: pd.DataFrame, test_days: int = 0):
+
     df = df_prices_raw.copy()
     # Extract the second level of columns which contain 'price'
-    price_cols = [col for col in df.columns if 'price' in col[1]]
+    price_cols = [col for col in df.columns if "price" in col[1]]
     means_stds = {}
-    
+
     # Standardize each 'price' column
     for col in price_cols:
         # mean = df.iloc[test_days:][col].mean()
         # std = df.iloc[test_days:][col].std()
-        df[col] = (df[col]/df[col].shift(-1)) - 1
+        df[col] = (df[col] / df[col].shift(-1)) - 1
         # df[col] = df[col] - df[col].shift(-1)
         # means_stds[col[0]] = (mean, std)
-        
-    return df, means_stds
 
+    return df, means_stds

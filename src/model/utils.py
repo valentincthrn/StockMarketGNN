@@ -8,6 +8,7 @@ def run_all(
     timestep: int,
     train_or_test: str,
     optimizer,
+    params,
     criterion: str,
     lstms,
     my_gnn,
@@ -22,7 +23,7 @@ def run_all(
 
     if train_or_test == "train":
         optimizer.zero_grad()
-        
+
     # PHASE 1: LSTM EXTRACTION
     features_extracted, comps = run_lstm_separatly(lstms, data_t, device)
 
@@ -36,6 +37,7 @@ def run_all(
     pred, true = run_mlp_heads_separatly(
         mlp_heads, features_encoded, comps, pred_t, macro, device
     )
+
     # Compute the loss
     if criterion == "MAPE":
         loss = mape_loss(pred, true)
@@ -45,6 +47,7 @@ def run_all(
     if train_or_test == "train":
         # Backward pass and optimization
         loss.backward()
+        torch.nn.utils.clip_grad_value_(params, 1.0)
         optimizer.step()
 
     return loss, pred, true, comps
